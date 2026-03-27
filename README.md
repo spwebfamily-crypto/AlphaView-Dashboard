@@ -126,9 +126,9 @@ docker compose up --build
 | Serviço | URL | Descrição |
 |---------|-----|-------------|
 | 🖥️ **Frontend** | `http://localhost:5173` | Dashboard principal |
-| 🔌 **Backend API** | `http://localhost:8000` | API REST |
-| ❤️ **Health Check** | `http://localhost:8000/api/v1/health` | Status do sistema |
-| 🎮 **Demo Snapshot** | `http://localhost:8000/api/v1/demo/snapshot` | Dados de demonstração |
+| 🔌 **Backend API** | `http://localhost:18000` | API REST |
+| ❤️ **Health Check** | `http://localhost:18000/api/v1/health` | Status do sistema |
+| 🎮 **Demo Snapshot** | `http://localhost:18000/api/v1/demo/snapshot` | Dados de demonstração |
 | 🔗 **API Proxy** | `http://localhost:5173/api/v1/health` | Proxy frontend-backend |
 
 ---
@@ -146,19 +146,32 @@ docker compose up --build
 ```env
 ALLOW_PUBLIC_REGISTRATION=true
 AUTH_SECRET_KEY=change-me-in-production
+AUTH_VERIFICATION_CODE_TTL_MINUTES=10
+AUTH_VERIFICATION_RESEND_COOLDOWN_SECONDS=60
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=
+EMAIL_SMTP_PASSWORD=
+EMAIL_FROM_EMAIL=
 WITHDRAWALS_ENABLED=false
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_CHECKOUT_SUCCESS_URL=
+STRIPE_CHECKOUT_CANCEL_URL=
 FRONTEND_BASE_URL=http://localhost:5173
 ```
 
 ### Fluxo recomendado
 
-1. Copie `.env.example` para `.env` e preencha as variáveis de auth e Stripe.
+1. Copie `.env.example` para `.env` e preencha as variáveis de auth, SMTP Gmail-compatible e Stripe.
 2. Suba a stack com `docker compose up --build`.
 3. Crie a primeira conta no ecrã de login do frontend.
-4. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
-5. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
+4. Confirme o código de 6 dígitos enviado para o email antes de tentar entrar no dashboard.
+5. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
+6. Entre em **Billing** para abrir o Stripe Checkout ou o Billing Portal.
+7. Configure os URLs de `STRIPE_CHECKOUT_*` e o `STRIPE_WEBHOOK_SECRET` antes de expor o fluxo de billing.
+8. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
 
 ---
 
@@ -167,7 +180,7 @@ FRONTEND_BASE_URL=http://localhost:5173
 Para popular o sistema com dados de demonstração/vendas:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/v1/demo/seed `
+Invoke-RestMethod -Method Post -Uri http://localhost:18000/api/v1/demo/seed `
   -ContentType 'application/json' `
   -Body '{"symbols":["AAPL","MSFT","NVDA"],"timeframe":"1min","days":5}'
 ```
@@ -208,7 +221,7 @@ npm install
 npm run dev
 ```
 
-> 💡 **Nota:** Em desenvolvimento local, o Vite faz proxy de `/api` para `http://localhost:8000`, mantendo os mesmos paths relativos do Docker.
+> 💡 **Nota:** Em desenvolvimento local, o Vite faz proxy de `/api` para `http://localhost:18000` por defeito, ou para `VITE_DEV_API_PROXY` se esse valor estiver definido.
 
 ---
 
@@ -252,6 +265,8 @@ python -m app.workers.retrain_worker `
 | Método | Endpoint | Descrição |
 |--------|----------|-------------|
 | `POST` | `/api/v1/auth/register` | Criar conta do dashboard |
+| `POST` | `/api/v1/auth/verify-email` | Confirmar código de email e abrir sessão |
+| `POST` | `/api/v1/auth/resend-verification` | Reenviar código de confirmação |
 | `POST` | `/api/v1/auth/login` | Autenticar utilizador |
 | `GET` | `/api/v1/auth/me` | Obter utilizador autenticado |
 | `POST` | `/api/v1/market-data/backfill` | Backfill de dados históricos |
@@ -268,6 +283,10 @@ python -m app.workers.retrain_worker `
 | `GET` | `/api/v1/wallet/summary` | Resumo do saldo sacável e estado Stripe |
 | `POST` | `/api/v1/wallet/stripe/onboarding-link` | Criar/retomar onboarding Stripe Connect |
 | `POST` | `/api/v1/wallet/withdrawals` | Pedir saque |
+| `GET` | `/api/v1/billing/summary` | Estado local de billing e Stripe Customer |
+| `POST` | `/api/v1/billing/checkout-session` | Criar sessão Stripe Checkout |
+| `POST` | `/api/v1/billing/portal-session` | Criar sessão do Stripe Billing Portal |
+| `POST` | `/api/v1/billing/webhook` | Receber webhooks Stripe para sincronização |
 
 ---
 
@@ -306,6 +325,8 @@ python -m app.workers.retrain_worker `
 - 💾 Migrações de schema ainda são bootstrap-style; Alembic será adicionado futuramente
 - 📉 Backtesting é intencionalmente simples e research-oriented, não é simulação de portfólio execution-grade
 - 🤖 Reinforcement learning permanece fora do escopo do baseline vendável
+- 💳 Billing Stripe já está ligado ao dashboard, mas ainda depende de `price_id` manual e não tem catálogo interno de planos
+- ✉️ O envio do código de confirmação depende de SMTP compatível com Gmail configurado com credenciais válidas
 
 ---
 

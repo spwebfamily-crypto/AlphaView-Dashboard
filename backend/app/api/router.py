@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import require_active_user
 from app.api.routes.auth import router as auth_router
 from app.api.routes.backtests import router as backtests_router
+from app.api.routes.billing import router as billing_router
 from app.api.routes.broker import router as broker_router
 from app.api.routes.demo import router as demo_router
 from app.api.routes.features import router as features_router
@@ -17,6 +18,7 @@ from app.api.routes.wallet import router as wallet_router
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(auth_router, tags=["auth"])
+api_router.include_router(billing_router, tags=["billing"])
 api_router.include_router(market_data_router, tags=["market-data"], dependencies=[Depends(require_active_user)])
 api_router.include_router(features_router, tags=["features"], dependencies=[Depends(require_active_user)])
 api_router.include_router(models_router, tags=["models"], dependencies=[Depends(require_active_user)])

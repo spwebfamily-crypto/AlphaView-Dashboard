@@ -7,6 +7,7 @@ export type PageKey =
   | "models"
   | "logs"
   | "account"
+  | "billing"
   | "settings";
 
 type SidebarProps = {
@@ -23,6 +24,7 @@ const navItems: Array<{ key: PageKey; label: string; hint: string; marker: strin
   { key: "models", label: "Models", hint: "Model registry and diagnostics", marker: "ML" },
   { key: "logs", label: "Logs", hint: "Recent system events", marker: "LG" },
   { key: "account", label: "Account", hint: "Login, payouts, Stripe Connect", marker: "AC" },
+  { key: "billing", label: "Billing", hint: "Checkout, subscriptions, customer portal", marker: "BL" },
   { key: "settings", label: "Settings", hint: "Runtime and provider status", marker: "ST" },
 ];
 

@@ -52,7 +52,7 @@ services:
       DEMO_SEED_PATH: ${DEMO_SEED_PATH:-../examples/sample_demo_seed.json}
       REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-18000}:8000"
     healthcheck:
       test:
         [

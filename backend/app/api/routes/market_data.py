@@ -30,6 +30,12 @@ def get_bars(*args, **kwargs):
     return service(*args, **kwargs)
 
 
+def get_or_fetch_bars(*args, **kwargs):
+    from app.services.market_data_service import get_or_fetch_bars as service
+
+    return service(*args, **kwargs)
+
+
 def get_market_status(*args, **kwargs):
     from app.services.market_data_service import get_market_status as service
 
@@ -72,6 +78,7 @@ def backfill(
 
 @router.get("/bars", response_model=list[BarResponse])
 def list_bars(
+    request: Request,
     symbol: str,
     timeframe: str = "1min",
     start: datetime | None = None,
@@ -79,7 +86,18 @@ def list_bars(
     limit: int = Query(default=500, le=5000),
     session: Session = Depends(get_db_session),
 ) -> list[BarResponse]:
-    rows = get_bars(session, symbol=symbol, timeframe=timeframe, start=start, end=end, limit=limit)
+    try:
+        rows = get_or_fetch_bars(
+            session,
+            request.app.state.settings,
+            symbol=symbol,
+            timeframe=timeframe,
+            start=start,
+            end=end,
+            limit=limit,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     return [
         BarResponse(
             symbol=ticker,

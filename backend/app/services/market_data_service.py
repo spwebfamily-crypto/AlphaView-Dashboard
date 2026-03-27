@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
 
@@ -295,6 +295,45 @@ def get_bars(
         query = query.where(MarketDataBar.timestamp <= ensure_utc(end))
     query = query.order_by(MarketDataBar.timestamp.asc()).limit(limit)
     return [(row, symbol_row.ticker) for row in session.scalars(query)]
+
+
+def _recent_fetch_window(*, timeframe: str, limit: int) -> tuple[datetime, datetime]:
+    now = datetime.now(timezone.utc)
+    if timeframe.lower() == "1day":
+        window_days = max(limit * 2, 180)
+        return now - timedelta(days=window_days), now
+
+    minutes = timeframe_to_minutes(timeframe)
+    approximate_session_span = max((minutes * limit) / 390, 1)
+    window_days = max(int(approximate_session_span * 7) + 7, 10)
+    return now - timedelta(days=window_days), now
+
+
+def get_or_fetch_bars(
+    session: Session,
+    settings: Settings,
+    *,
+    symbol: str,
+    timeframe: str,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    limit: int = 500,
+) -> list[tuple[MarketDataBar, str]]:
+    rows = get_bars(session, symbol=symbol, timeframe=timeframe, start=start, end=end, limit=limit)
+    if rows or start is not None or end is not None:
+        return rows
+
+    fetch_start, fetch_end = _recent_fetch_window(timeframe=timeframe, limit=limit)
+    bars, _ = fetch_historical_bars(
+        settings,
+        symbol=symbol,
+        timeframe=timeframe,
+        start=fetch_start,
+        end=fetch_end,
+        source="auto",
+    )
+    upsert_bars(session, symbol=symbol, timeframe=timeframe, bars=bars)
+    return get_bars(session, symbol=symbol, timeframe=timeframe, start=None, end=None, limit=limit)
 
 
 def latest_price(session: Session, settings: Settings, symbol: str, timeframe: str = "1min") -> float:

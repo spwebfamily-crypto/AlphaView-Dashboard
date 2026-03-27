@@ -50,6 +50,11 @@ def generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 
 
+def generate_verification_code(length: int = 6) -> str:
+    upper_bound = 10**length
+    return f"{secrets.randbelow(upper_bound):0{length}d}"
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

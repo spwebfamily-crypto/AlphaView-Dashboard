@@ -12,6 +12,7 @@ from app.core.security import (
     create_signed_token,
     decode_signed_token,
     generate_refresh_token,
+    generate_verification_code,
     hash_password,
     hash_token,
     utc_now,
@@ -38,6 +39,13 @@ class AuthSessionBundle:
     session: UserSession
     access_token: str
     refresh_token: str
+
+
+@dataclass
+class VerificationChallengeBundle:
+    user: User
+    code: str
+    expires_at: datetime
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -87,6 +95,86 @@ def authenticate_user(db_session: Session, email: str, password: str) -> User:
         raise AuthServiceError("Invalid email or password.", status_code=401)
     if not user.is_active:
         raise AuthServiceError("This account is disabled.", status_code=403)
+    if user.email_verified_at is None:
+        raise AuthServiceError("Verify your email before signing in.", status_code=403)
+    return user
+
+
+def issue_email_verification_code(
+    db_session: Session,
+    settings: Settings,
+    *,
+    user: User,
+    force: bool = False,
+) -> VerificationChallengeBundle:
+    if user.email_verified_at is not None:
+        raise AuthServiceError("This email is already verified.", status_code=409)
+
+    now = utc_now()
+    if (
+        not force
+        and user.email_verification_sent_at is not None
+        and _as_utc(user.email_verification_sent_at)
+        + timedelta(seconds=settings.auth_verification_resend_cooldown_seconds)
+        > now
+    ):
+        remaining_seconds = int(
+            (
+                _as_utc(user.email_verification_sent_at)
+                + timedelta(seconds=settings.auth_verification_resend_cooldown_seconds)
+                - now
+            ).total_seconds()
+        )
+        raise AuthServiceError(
+            f"Wait {max(1, remaining_seconds)} seconds before requesting another confirmation code.",
+            status_code=429,
+        )
+
+    code = generate_verification_code()
+    expires_at = now + timedelta(minutes=settings.auth_verification_code_ttl_minutes)
+    user.email_verification_code_hash = hash_token(code)
+    user.email_verification_expires_at = expires_at
+    user.email_verification_sent_at = now
+    db_session.commit()
+    db_session.refresh(user)
+    return VerificationChallengeBundle(user=user, code=code, expires_at=expires_at)
+
+
+def verify_email_code(
+    db_session: Session,
+    *,
+    email: str,
+    code: str,
+) -> User:
+    user = db_session.scalar(select(User).where(User.email == email))
+    if user is None:
+        raise AuthServiceError("Invalid email or confirmation code.", status_code=401)
+    if user.email_verified_at is not None:
+        raise AuthServiceError("This email is already verified. Sign in instead.", status_code=409)
+    if (
+        not user.email_verification_code_hash
+        or user.email_verification_expires_at is None
+        or _as_utc(user.email_verification_expires_at) <= utc_now()
+    ):
+        raise AuthServiceError("Your confirmation code has expired. Request a new one.", status_code=401)
+    if hash_token(code) != user.email_verification_code_hash:
+        raise AuthServiceError("Invalid email or confirmation code.", status_code=401)
+
+    user.email_verified_at = utc_now()
+    user.email_verification_code_hash = None
+    user.email_verification_expires_at = None
+    user.email_verification_sent_at = None
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+def get_unverified_user_by_email(db_session: Session, email: str) -> User:
+    user = db_session.scalar(select(User).where(User.email == email))
+    if user is None:
+        raise AuthServiceError("Account not found.", status_code=404)
+    if user.email_verified_at is not None:
+        raise AuthServiceError("This email is already verified. Sign in instead.", status_code=409)
     return user
 
 

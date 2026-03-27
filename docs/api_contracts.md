@@ -9,17 +9,25 @@
 
 - `POST /api/v1/auth/register`
 - Inputs: `email`, `password`, optional `full_name`
-- Creates a real user record in the database, validates password strength, opens a revocable session, and sets `HttpOnly` cookies
+- Creates a real user record in the database, validates password strength, issues a confirmation code, and sends it over the configured SMTP/Gmail-compatible mailbox
 
 - `POST /api/v1/auth/login`
 - Inputs: `email`, `password`
-- Authenticates the dashboard user and rotates into a fresh database-backed session
+- Authenticates the dashboard user only after the email address has been confirmed
 
 - `POST /api/v1/auth/refresh`
 - Rotates the refresh session and renews the access cookie without exposing tokens to the frontend runtime
 
 - `POST /api/v1/auth/logout`
 - Revokes the stored session and clears auth cookies
+
+- `POST /api/v1/auth/verify-email`
+- Inputs: `email`, `code`
+- Confirms the email verification code, marks the user as verified, creates a revocable session, and sets `HttpOnly` cookies
+
+- `POST /api/v1/auth/resend-verification`
+- Inputs: `email`
+- Reissues a fresh confirmation code for an existing unverified account and sends it again via SMTP
 
 - `GET /api/v1/auth/me`
 - Returns the current authenticated user profile used by the dashboard shell
@@ -140,3 +148,18 @@
 - `POST /api/v1/wallet/withdrawals`
 - Inputs: `amount_cents`
 - Validates withdrawable cash, checks Stripe onboarding and platform balance, then creates a transfer and payout attempt in test mode when enabled
+
+## Billing / Stripe Checkout
+
+- `GET /api/v1/billing/summary`
+- Returns the authenticated user's local Stripe customer/subscription state used by the billing UI
+
+- `POST /api/v1/billing/checkout-session`
+- Inputs: `price_id`, optional `mode` (`subscription` or `payment`), optional `quantity`, optional `plan_code`, optional success/cancel URLs
+- Creates a hosted Stripe Checkout Session for the authenticated dashboard user and links metadata back to the local user id
+
+- `POST /api/v1/billing/portal-session`
+- Creates a Stripe Billing Portal session for the authenticated user's existing Stripe customer
+
+- `POST /api/v1/billing/webhook`
+- Public Stripe webhook receiver that verifies the `Stripe-Signature` header, then syncs checkout completion and subscription lifecycle state into PostgreSQL

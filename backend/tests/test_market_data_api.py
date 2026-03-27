@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from app.services.polygon.historical import PolygonAggregateBar
 from app.services.finnhub.historical import FinnhubCandleBar
 from app.services.finnhub.market import FinnhubMarketStatus
 
@@ -69,6 +70,46 @@ def test_market_data_backfill_supports_finnhub_source(authenticated_client, monk
     assert response.status_code == 200
     assert response.json()["source"] == "finnhub"
     assert response.json()["inserted"] == 2
+
+
+def test_market_data_query_auto_fetches_polygon_when_store_is_empty(authenticated_client, monkeypatch) -> None:
+    authenticated_client.app.state.settings.polygon_api_key = "test-token"
+
+    def fake_polygon_bars(*args, **kwargs) -> list[PolygonAggregateBar]:
+        return [
+            PolygonAggregateBar(
+                timestamp=datetime(2026, 3, 26, 14, 30, tzinfo=timezone.utc),
+                open=Decimal("170.10"),
+                high=Decimal("171.25"),
+                low=Decimal("169.95"),
+                close=Decimal("170.85"),
+                volume=4500000,
+                vwap=Decimal("170.55"),
+                trades_count=12034,
+            ),
+            PolygonAggregateBar(
+                timestamp=datetime(2026, 3, 26, 14, 31, tzinfo=timezone.utc),
+                open=Decimal("170.85"),
+                high=Decimal("171.40"),
+                low=Decimal("170.60"),
+                close=Decimal("171.20"),
+                volume=4250000,
+                vwap=Decimal("171.01"),
+                trades_count=11321,
+            ),
+        ]
+
+    monkeypatch.setattr("app.services.market_data_service.normalize_polygon_aggregates", fake_polygon_bars)
+
+    response = authenticated_client.get(
+        "/api/v1/market-data/bars",
+        params={"symbol": "AAPL", "timeframe": "1min", "limit": 10},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 2
+    assert payload[0]["symbol"] == "AAPL"
+    assert payload[0]["close"] == 170.85
 
 
 def test_market_status_endpoint_uses_finnhub(authenticated_client, monkeypatch) -> None:

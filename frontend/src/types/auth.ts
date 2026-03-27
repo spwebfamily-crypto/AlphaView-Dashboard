@@ -9,6 +9,7 @@ export type AuthUser = {
   stripe_connected_account_id: string | null;
   stripe_onboarding_complete: boolean;
   stripe_transfers_enabled: boolean;
+  email_verified_at: string | null;
   last_login_at: string | null;
 };
 
@@ -16,4 +17,10 @@ export type AuthSession = {
   user: AuthUser;
   access_token_expires_in_seconds: number;
   refresh_token_expires_in_seconds: number;
+};
+
+export type AuthRegistrationChallenge = {
+  message: string;
+  email: string;
+  verification_expires_in_seconds: number;
 };

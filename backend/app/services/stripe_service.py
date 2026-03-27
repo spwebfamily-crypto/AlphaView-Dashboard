@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import time
 from collections.abc import Iterable
 from typing import Any
@@ -23,9 +26,36 @@ def _flatten_form_data(payload: dict[str, Any], prefix: str = "") -> dict[str, s
         compound_key = f"{prefix}[{key}]" if prefix else key
         if isinstance(value, dict):
             flattened.update(_flatten_form_data(value, compound_key))
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                nested_key = f"{compound_key}[{index}]"
+                if isinstance(item, dict):
+                    flattened.update(_flatten_form_data(item, nested_key))
+                elif item is not None:
+                    flattened[nested_key] = "true" if item is True else "false" if item is False else str(item)
         elif value is not None:
-            flattened[compound_key] = str(value)
+            flattened[compound_key] = "true" if value is True else "false" if value is False else str(value)
     return flattened
+
+
+def _parse_signature_header(signature_header: str) -> tuple[int, list[str]]:
+    timestamp: int | None = None
+    signatures: list[str] = []
+    for chunk in signature_header.split(","):
+        key, _, value = chunk.partition("=")
+        normalized_key = key.strip()
+        normalized_value = value.strip()
+        if normalized_key == "t":
+            try:
+                timestamp = int(normalized_value)
+            except ValueError as exc:
+                raise StripeServiceError("Invalid Stripe webhook timestamp.", status_code=400) from exc
+        elif normalized_key == "v1" and normalized_value:
+            signatures.append(normalized_value)
+
+    if timestamp is None or not signatures:
+        raise StripeServiceError("Invalid Stripe-Signature header.", status_code=400)
+    return timestamp, signatures
 
 
 class StripeConnectService:
@@ -177,6 +207,68 @@ class StripeConnectService:
             form_payload={},
         )
 
+    def create_checkout_session(
+        self,
+        *,
+        customer_id: str | None,
+        customer_email: str | None,
+        client_reference_id: str,
+        price_id: str,
+        mode: str,
+        quantity: int,
+        metadata: dict[str, Any] | None = None,
+        success_url: str | None = None,
+        cancel_url: str | None = None,
+    ) -> dict[str, Any]:
+        normalized_metadata = {key: value for key, value in (metadata or {}).items() if value is not None}
+        payload: dict[str, Any] = {
+            "mode": mode,
+            "success_url": success_url or self.settings.stripe_checkout_success_url_resolved,
+            "cancel_url": cancel_url or self.settings.stripe_checkout_cancel_url_resolved,
+            "client_reference_id": client_reference_id,
+            "line_items": [{"price": price_id, "quantity": quantity}],
+            "metadata": normalized_metadata,
+        }
+        if customer_id:
+            payload["customer"] = customer_id
+        elif customer_email:
+            payload["customer_email"] = customer_email
+
+        if mode == "subscription":
+            payload["subscription_data"] = {"metadata": normalized_metadata}
+        else:
+            payload["payment_intent_data"] = {"metadata": normalized_metadata}
+
+        return self._request(
+            "POST",
+            "/v1/checkout/sessions",
+            api_version=self.settings.stripe_api_version,
+            form_payload=payload,
+        )
+
+    def create_billing_portal_session(
+        self,
+        *,
+        customer_id: str,
+        return_url: str | None = None,
+    ) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            "/v1/billing_portal/sessions",
+            api_version=self.settings.stripe_api_version,
+            form_payload={
+                "customer": customer_id,
+                "return_url": return_url or self.settings.stripe_billing_portal_return_url_resolved,
+            },
+        )
+
+    def retrieve_subscription(self, subscription_id: str) -> dict[str, Any]:
+        return self._request(
+            "GET",
+            f"/v1/subscriptions/{subscription_id}",
+            api_version=self.settings.stripe_api_version,
+        )
+
     def retrieve_platform_balance(self) -> dict[str, Any]:
         return self._request(
             "GET",
@@ -224,3 +316,32 @@ class StripeConnectService:
                 "metadata": metadata or {},
             },
         )
+
+    def parse_webhook_event(self, payload: bytes, stripe_signature: str | None) -> dict[str, Any]:
+        if not self.settings.stripe_webhook_secret:
+            raise StripeServiceError("Stripe webhook secret is not configured.", status_code=503)
+        if not stripe_signature:
+            raise StripeServiceError("Missing Stripe-Signature header.", status_code=400)
+
+        timestamp, signatures = _parse_signature_header(stripe_signature)
+        if abs(int(time.time()) - timestamp) > self.settings.stripe_webhook_tolerance_seconds:
+            raise StripeServiceError("Stripe webhook timestamp is outside the allowed tolerance.", status_code=400)
+
+        try:
+            decoded_payload = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise StripeServiceError("Invalid Stripe webhook payload.", status_code=400) from exc
+
+        signed_payload = f"{timestamp}.{decoded_payload}".encode("utf-8")
+        expected_signature = hmac.new(
+            self.settings.stripe_webhook_secret.encode("utf-8"),
+            signed_payload,
+            hashlib.sha256,
+        ).hexdigest()
+        if not any(hmac.compare_digest(signature, expected_signature) for signature in signatures):
+            raise StripeServiceError("Invalid Stripe webhook signature.", status_code=400)
+
+        try:
+            return json.loads(decoded_payload)
+        except json.JSONDecodeError as exc:
+            raise StripeServiceError("Invalid Stripe webhook payload.", status_code=400) from exc

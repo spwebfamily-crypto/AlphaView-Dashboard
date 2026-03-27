@@ -17,6 +17,7 @@ import { AppShell, type ShellStatCard } from "./components/layout/AppShell";
 import type { PageKey } from "./components/layout/Sidebar";
 import { Account } from "./pages/Account";
 import { Backtests } from "./pages/Backtests";
+import { Billing } from "./pages/Billing";
 import { LiveSignals } from "./pages/LiveSignals";
 import { Logs } from "./pages/Logs";
 import { Models } from "./pages/Models";
@@ -71,6 +72,11 @@ const pageCopy: Record<PageKey, { eyebrow: string; title: string; description: s
     eyebrow: "Identity and payouts",
     title: "Account and withdrawals",
     description: "Manage secure access, Stripe Connect onboarding, and withdrawal requests from one page.",
+  },
+  billing: {
+    eyebrow: "Revenue layer",
+    title: "Billing and subscriptions",
+    description: "Launch Stripe Checkout, inspect local subscription state, and open the customer portal.",
   },
   settings: {
     eyebrow: "Runtime controls",
@@ -149,7 +155,14 @@ function getHeaderCards(snapshot: DashboardSnapshot | null, runtime: RuntimeSett
 }
 
 function getInitialPage(): PageKey {
-  return new URLSearchParams(window.location.search).get("stripe") ? "account" : "overview";
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.get("stripe")) {
+    return "account";
+  }
+  if (searchParams.get("billing")) {
+    return "billing";
+  }
+  return "overview";
 }
 
 export default function App() {
@@ -330,6 +343,8 @@ export default function App() {
         return <Logs snapshot={snapshot} />;
       case "account":
         return <Account user={currentUser} />;
+      case "billing":
+        return <Billing />;
       case "settings":
         return (
           <Settings

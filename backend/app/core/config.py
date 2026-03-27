@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     auth_access_token_ttl_minutes: int = 15
     auth_refresh_token_ttl_days: int = 7
     auth_cookie_secure: bool = False
+    auth_verification_code_ttl_minutes: int = 10
+    auth_verification_resend_cooldown_seconds: int = 60
+    email_smtp_host: str | None = None
+    email_smtp_port: int = 587
+    email_smtp_username: str | None = None
+    email_smtp_password: str | None = None
+    email_from_email: str | None = None
+    email_from_name: str = "AlphaView Dashboard"
+    email_smtp_use_starttls: bool = True
+    email_smtp_use_ssl: bool = False
     polygon_api_key: str | None = None
     polygon_base_url: str = "https://api.massive.com"
     polygon_websocket_url: str = "wss://socket.massive.com/stocks"
@@ -56,6 +66,11 @@ class Settings(BaseSettings):
     stripe_account_links_api_version: str = "2025-08-27.preview"
     stripe_connect_return_url: str | None = None
     stripe_connect_refresh_url: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_webhook_tolerance_seconds: int = 300
+    stripe_checkout_success_url: str | None = None
+    stripe_checkout_cancel_url: str | None = None
+    stripe_billing_portal_return_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -115,6 +130,18 @@ class Settings(BaseSettings):
     @property
     def stripe_connect_refresh_url_resolved(self) -> str:
         return self.stripe_connect_refresh_url or f"{self.frontend_base_url.rstrip('/')}/?stripe=refresh"
+
+    @property
+    def stripe_checkout_success_url_resolved(self) -> str:
+        return self.stripe_checkout_success_url or f"{self.frontend_base_url.rstrip('/')}/?billing=success"
+
+    @property
+    def stripe_checkout_cancel_url_resolved(self) -> str:
+        return self.stripe_checkout_cancel_url or f"{self.frontend_base_url.rstrip('/')}/?billing=cancel"
+
+    @property
+    def stripe_billing_portal_return_url_resolved(self) -> str:
+        return self.stripe_billing_portal_return_url or f"{self.frontend_base_url.rstrip('/')}/?billing=portal"
 
 
 @lru_cache
