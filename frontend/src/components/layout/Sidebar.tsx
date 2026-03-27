@@ -5,27 +5,31 @@ type SidebarProps = {
   onSelect: (page: PageKey) => void;
 };
 
-const navItems: Array<{ key: PageKey; label: string; hint: string }> = [
-  { key: "overview", label: "Overview", hint: "Candles, ranked ideas, and market context" },
-  { key: "signals", label: "Signals", hint: "Fresh BUY / SELL / HOLD outputs" },
-  { key: "positions", label: "Positions", hint: "Simulated inventory from the execution engine" },
-  { key: "trades", label: "Trades", hint: "Orders, fills, slippage, and fees" },
-  { key: "backtests", label: "Backtests", hint: "Research performance and equity curves" },
-  { key: "models", label: "Models", hint: "Baseline model registry and diagnostics" },
-  { key: "logs", label: "Logs", hint: "Recent system events and warnings" },
-  { key: "settings", label: "Settings", hint: "Runtime defaults and simulation status" },
+const navItems: Array<{ key: PageKey; label: string; hint: string; marker: string }> = [
+  { key: "overview", label: "Overview", hint: "Market structure and ranked ideas", marker: "OV" },
+  { key: "signals", label: "Signals", hint: "Latest BUY / SELL / HOLD tape", marker: "SG" },
+  { key: "positions", label: "Positions", hint: "Simulated inventory and PnL", marker: "PS" },
+  { key: "trades", label: "Trades", hint: "Orders, fills, fees, slippage", marker: "TR" },
+  { key: "backtests", label: "Backtests", hint: "Equity curve and run archive", marker: "BT" },
+  { key: "models", label: "Models", hint: "Model registry and diagnostics", marker: "ML" },
+  { key: "logs", label: "Logs", hint: "Recent system events", marker: "LG" },
+  { key: "settings", label: "Settings", hint: "Runtime and provider status", marker: "ST" },
 ];
 
 export function Sidebar({ activePage, onSelect }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <span className="eyebrow">Market Research Terminal</span>
-        <h2>AlphaView</h2>
-        <p className="sidebar-copy">
-          Real market candles, buy-side research, and simulated execution kept in one operating view.
-        </p>
+        <div className="sidebar-logo">A</div>
+        <div>
+          <span className="sidebar-label">AlphaView OS</span>
+          <h2>Admin Desk</h2>
+        </div>
       </div>
+
+      <p className="sidebar-copy">
+        Notus-style control surface for market research, signals, and simulation on top of real US equity data.
+      </p>
 
       <nav className="sidebar-nav" aria-label="Primary">
         {navItems.map((item) => (
@@ -35,16 +39,20 @@ export function Sidebar({ activePage, onSelect }: SidebarProps) {
             onClick={() => onSelect(item.key)}
             type="button"
           >
-            <span>{item.label}</span>
-            <small>{item.hint}</small>
+            <span className="nav-icon">{item.marker}</span>
+            <span className="nav-copy">
+              <strong>{item.label}</strong>
+              <small>{item.hint}</small>
+            </span>
           </button>
         ))}
       </nav>
 
       <div className="sidebar-note">
-        <span className="eyebrow">Operating Mode</span>
-        <p className="sidebar-copy">
-          The dashboard is optimized for research and simulation over real historical data, not external broker routing.
+        <span className="eyebrow">Environment</span>
+        <p>
+          Simulation only. Historical and status data are real, but order routing stays local and no broker claims are
+          made by the interface.
         </p>
       </div>
     </aside>

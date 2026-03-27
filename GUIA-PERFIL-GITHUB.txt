@@ -1,0 +1,116 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    🚀 GUIA COMPLETO - PERFIL GITHUB                          ║
+║                         Username: spwebfamily-crypto                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📋 MÉTODO 1: SCRIPT AUTOMÁTICO (MAIS FÁCIL)
+═══════════════════════════════════════════════════════════════════════════════
+
+1️⃣ Abra o PowerShell como Administrador
+
+2️⃣ Execute este comando:
+   cd "c:\Users\Rodrigo🐐\OneDrive\Desktop\AlphaView-Dashboard"
+   .\setup-github-profile.ps1
+
+3️⃣ Siga as instruções na tela!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 MÉTODO 2: MANUAL (PASSO A PASSO)
+═══════════════════════════════════════════════════════════════════════════════
+
+PASSO 1: Criar o Repositório
+─────────────────────────────
+1. Acesse: https://github.com/new
+2. Preencha:
+   • Repository name: spwebfamily-crypto
+   • Description: (deixe em branco ou escreva algo)
+   • Public: ✅ (marque)
+   • Add a README file: ✅ (marque)
+3. Clique em "Create repository"
+
+PASSO 2: Editar o README
+─────────────────────────
+1. No repositório criado, clique no arquivo "README.md"
+2. Clique no ícone de lápis (✏️) no canto superior direito
+3. DELETE todo o conteúdo atual
+4. Abra este arquivo no seu PC:
+   c:\Users\Rodrigo🐐\OneDrive\Desktop\AlphaView-Dashboard\README_GITHUB_PROFILE.md
+5. Selecione TUDO (Ctrl+A) e copie (Ctrl+C)
+6. Cole no GitHub (Ctrl+V)
+7. Role até o final da página
+8. Clique em "Commit changes"
+9. Clique em "Commit changes" novamente na janela que abrir
+
+PASSO 3: Verificar
+───────────────────
+1. Acesse: https://github.com/spwebfamily-crypto
+2. Seu perfil deve estar INCRÍVEL! 🎉
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📝 PERSONALIZAÇÕES OPCIONAIS
+═══════════════════════════════════════════════════════════════════════════════
+
+Depois de criar, você pode editar o README.md para:
+
+1. Adicionar seu LinkedIn:
+   Procure: seu-perfil
+   Substitua por: seu-username-do-linkedin
+
+2. Adicionar seu Email:
+   Procure: seu-email@example.com
+   Substitua por: seu-email-real@gmail.com
+
+3. Adicionar seu Portfolio:
+   Procure: seu-portfolio.com
+   Substitua por: seu-site.com
+   (ou delete a linha se não tiver)
+
+4. Adicionar mais projetos:
+   Edite a seção "Seus Outros Projetos"
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎯 O QUE VOCÊ VAI TER NO PERFIL
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ Header animado com seu nome
+✅ Texto digitando com frases rotativas
+✅ Badges de tecnologias (Python, React, Docker, etc)
+✅ GitHub Stats em tempo real
+✅ Gráfico de streak (dias consecutivos)
+✅ Top linguagens
+✅ Gráfico de atividade
+✅ Troféus do GitHub
+✅ Mindmap de expertise
+✅ Seção de projetos destacando AlphaView
+✅ Filosofia de código
+✅ Citações inspiradoras
+✅ Contador de visualizações do perfil
+
+═══════════════════════════════════════════════════════════════════════════════
+
+❓ PROBLEMAS COMUNS
+═══════════════════════════════════════════════════════════════════════════════
+
+Problema: "Repository already exists"
+Solução: Você já criou. Vá direto para o PASSO 2.
+
+Problema: Gráficos não aparecem
+Solução: Aguarde alguns minutos. O GitHub precisa processar.
+
+Problema: Snake animation não funciona
+Solução: Normal! Ela precisa de configuração extra (opcional).
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎉 PRONTO!
+═══════════════════════════════════════════════════════════════════════════════
+
+Seu perfil vai ficar assim:
+https://github.com/spwebfamily-crypto
+
+Compartilhe com o mundo! 🚀🐐
+
+═══════════════════════════════════════════════════════════════════════════════

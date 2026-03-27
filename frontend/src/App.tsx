@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import {
   fetchBrokerStatus,
   fetchDashboardSnapshot,
-  fetchHealth,
   fetchExecutions,
+  fetchHealth,
   fetchOrders,
   fetchRuntimeSettings,
   seedDemoData,
 } from "./api/client";
-import { AppShell } from "./components/layout/AppShell";
+import { AppShell, type ShellStatCard } from "./components/layout/AppShell";
 import type { PageKey } from "./components/layout/Sidebar";
 import { Backtests } from "./pages/Backtests";
 import { LiveSignals } from "./pages/LiveSignals";
@@ -20,9 +20,122 @@ import { Positions } from "./pages/Positions";
 import { Settings } from "./pages/Settings";
 import { Trades } from "./pages/Trades";
 import type { BrokerStatus, Execution, Order } from "./types/broker";
-import type { DashboardSnapshot } from "./types/dashboard";
+import type { DashboardBacktest, DashboardSnapshot, SummaryCard } from "./types/dashboard";
 import type { HealthResponse } from "./types/health";
 import type { RuntimeSettings } from "./types/runtime";
+import { formatCurrency, formatPercent } from "./utils/format";
+
+const pageCopy: Record<PageKey, { eyebrow: string; title: string; description: string }> = {
+  overview: {
+    eyebrow: "Research overview",
+    title: "Market research dashboard",
+    description: "Review the candle structure, shortlist symbols, and keep the simulation context visible.",
+  },
+  signals: {
+    eyebrow: "Signal tape",
+    title: "Latest signal outputs",
+    description: "Inspect the freshest BUY, HOLD, and SELL calls generated on top of stored market data.",
+  },
+  positions: {
+    eyebrow: "Exposure",
+    title: "Simulated positions",
+    description: "Track inventory, market value, and unrealized PnL created by the local execution engine.",
+  },
+  trades: {
+    eyebrow: "Execution log",
+    title: "Orders and executions",
+    description: "Review simulated fills, slippage assumptions, and the order flow behind the research process.",
+  },
+  backtests: {
+    eyebrow: "Research archive",
+    title: "Backtest performance",
+    description: "Keep stored run quality visible with equity curves, distribution, and run history.",
+  },
+  models: {
+    eyebrow: "Model registry",
+    title: "Current model lineup",
+    description: "Monitor the trained baselines that feed the research and signal layers.",
+  },
+  logs: {
+    eyebrow: "System events",
+    title: "Operational logs",
+    description: "Audit ingestion, training, backtesting, and simulation messages in one place.",
+  },
+  settings: {
+    eyebrow: "Runtime controls",
+    title: "Settings and providers",
+    description: "Check runtime defaults, market-status providers, and the simulation adapter state.",
+  },
+};
+
+function formatSummaryValue(card: SummaryCard) {
+  if (typeof card.value === "string") {
+    return card.value;
+  }
+
+  const label = card.label.toLowerCase();
+  if (label.includes("rate") || label.includes("return") || label.includes("drawdown")) {
+    return formatPercent(card.value);
+  }
+
+  return formatCurrency(card.value);
+}
+
+function formatSummaryMeta(card: SummaryCard) {
+  if (card.delta == null || Number.isNaN(card.delta)) {
+    return "Stored dashboard metric";
+  }
+
+  const prefix = card.delta >= 0 ? "+" : "";
+  return `${prefix}${formatCurrency(card.delta)} vs previous snapshot`;
+}
+
+function getBestBacktest(backtests: DashboardBacktest[]) {
+  return [...backtests].sort((left, right) => right.sharpe + right.total_return - (left.sharpe + left.total_return))[0];
+}
+
+function getHeaderCards(snapshot: DashboardSnapshot | null, runtime: RuntimeSettings | null): ShellStatCard[] {
+  const tones: ShellStatCard["tone"][] = ["blue", "emerald", "amber", "slate"];
+
+  if (snapshot?.summary_cards?.length) {
+    return snapshot.summary_cards.slice(0, 4).map((card, index) => ({
+      label: card.label,
+      value: formatSummaryValue(card),
+      meta: formatSummaryMeta(card),
+      tone: tones[index % tones.length],
+    }));
+  }
+
+  const openPositions = (snapshot?.positions ?? []).filter((position) => Math.abs(position.quantity) > 0).length;
+  const bestBacktest = getBestBacktest(snapshot?.backtests ?? []);
+
+  return [
+    {
+      label: "Signals",
+      value: String(snapshot?.latest_signals.length ?? 0),
+      meta: "Fresh items on the latest tape",
+      tone: "blue",
+    },
+    {
+      label: "Positions",
+      value: String(openPositions),
+      meta: "Open simulated exposures",
+      tone: "emerald",
+    },
+    {
+      label: "Best Sharpe",
+      value: bestBacktest ? bestBacktest.sharpe.toFixed(2) : "-",
+      meta: bestBacktest ? bestBacktest.name : "No stored backtest",
+      tone: "amber",
+    },
+    {
+      label: "Providers",
+      value: String(runtime?.available_market_data_sources?.length ?? 0),
+      meta: runtime?.available_market_data_sources?.join(" / ") ?? "Waiting for runtime settings",
+      tone: "slate",
+    },
+  ];
+}
 
 export default function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -126,12 +239,19 @@ export default function App() {
     }
   }
 
+  const activeCopy = pageCopy[activePage];
+
   return (
     <AppShell
       mode={health?.execution_mode ?? (import.meta.env.VITE_APP_MODE ?? "PAPER")}
       activePage={activePage}
       onPageChange={setActivePage}
       apiStatus={error ? "offline" : "online"}
+      eyebrow={activeCopy.eyebrow}
+      title={activeCopy.title}
+      description={activeCopy.description}
+      generatedAt={snapshot?.generated_at}
+      headerCards={getHeaderCards(snapshot, runtime)}
     >
       {renderPage()}
     </AppShell>

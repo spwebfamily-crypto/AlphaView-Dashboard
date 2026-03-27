@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useState } from "react";
 
 import { fetchMarketBars, fetchMarketPreview } from "../api/client";
+import { DataTable } from "../components/DataTable";
+import { BarChart } from "../components/charts/BarChart";
 import { CandlestickChart } from "../components/charts/CandlestickChart";
 import { LineChart } from "../components/charts/LineChart";
-import { DataTable } from "../components/DataTable";
 import type { DashboardBacktest, DashboardModel, DashboardSnapshot, LatestSignal } from "../types/dashboard";
 import type { MarketBar } from "../types/marketData";
 import type { RuntimeSettings } from "../types/runtime";
@@ -193,7 +194,7 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
       ),
     ),
   );
-  const summaryFocus = (snapshot?.summary_cards ?? []).slice(0, 4);
+
   const researchRows = [
     {
       label: "Signal bias",
@@ -223,75 +224,102 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
     },
   ];
 
-  return (
-    <div className="overview-shell">
-      <section className="market-hero">
-        <div className="market-hero-copy">
-          <span className="eyebrow">Market Research Desk</span>
-          <h1>Search a stock, inspect the candles, and decide if the buy thesis is real.</h1>
-          <p>
-            This workspace puts price structure first: market candles in the center, ranked buy ideas on the side,
-            and the model or backtest context underneath the chart instead of hiding it in secondary pages.
-          </p>
-        </div>
+  const marketPulse = [
+    {
+      label: "Latest close",
+      value: latestBar ? formatCurrency(latestBar.close) : "-",
+      note: latestBar ? formatDateTime(latestBar.timestamp) : "Waiting for bars",
+    },
+    {
+      label: "Session range",
+      value: bars.length > 0 ? `${formatCurrency(rangeLow)} to ${formatCurrency(rangeHigh)}` : "-",
+      note: barsSource,
+    },
+    {
+      label: "Average volume",
+      value: averageVolume > 0 ? averageVolume.toFixed(0) : "-",
+      note: `Across ${bars.length || 0} candles`,
+    },
+    {
+      label: "Backtest leader",
+      value: leadBacktest ? leadBacktest.name : "No run",
+      note: leadBacktest ? `Sharpe ${leadBacktest.sharpe.toFixed(2)}` : "Generate a run to compare",
+    },
+  ];
 
-        <div className="hero-action-panel">
-          <span className="metric-label">Current buy focus</span>
-          <strong>{selectedSymbol}</strong>
-          <p>{getOpportunityLabel(selectedSignal, convictionScore)}</p>
-          <div className="hero-score">
-            <span>Conviction score</span>
-            <strong>{convictionScore}/100</strong>
+  const decisionCards = [
+    {
+      label: "Lead model",
+      value: leadModel ? leadModel.name : "No model",
+      note: leadModel ? `ROC-AUC ${leadModel.roc_auc.toFixed(2)} / F1 ${leadModel.f1.toFixed(2)}` : "Train models first",
+    },
+    {
+      label: "Signal tape",
+      value: `${rankedSignals.length} names`,
+      note: rankedSignals.length > 0 ? `${rankedSignals[0].symbol} is currently leading` : "No recent signals",
+    },
+    {
+      label: "Research stance",
+      value: getOpportunityLabel(selectedSignal, convictionScore),
+      note: selectedSignal?.reason ?? "Use the candle structure and context cards before simulating a trade.",
+    },
+    {
+      label: "Snapshot age",
+      value: formatDateTime(snapshot?.generated_at),
+      note: "Latest stored dashboard snapshot",
+    },
+  ];
+
+  return (
+    <div className="dashboard-page">
+      <section className="panel market-toolbar">
+        <div className="toolbar-intro">
+          <div>
+            <span className="eyebrow">Buy-side workspace</span>
+            <h2>Search a ticker and validate the setup before simulating the order.</h2>
+            <p>
+              This overview keeps the price structure in the center and pushes signals, model strength, and backtest
+              context into the same decision surface.
+            </p>
+          </div>
+
+          <div className="focus-summary">
+            <span className="metric-label">Current focus</span>
+            <strong>{selectedSymbol}</strong>
+            <p>{getOpportunityLabel(selectedSignal, convictionScore)}</p>
+            <div className="focus-summary-score">
+              <span>Conviction</span>
+              <strong>{convictionScore}/100</strong>
+            </div>
           </div>
         </div>
-      </section>
 
-      <section className="summary-ribbon">
-        {summaryFocus.map((card) => (
-          <article className="ribbon-card" key={card.label}>
-            <span>{card.label}</span>
-            <strong>
-              {typeof card.value === "number"
-                ? card.label.includes("Rate") || card.label.includes("Drawdown")
-                  ? formatPercent(card.value)
-                  : formatCurrency(card.value)
-                : card.value}
-            </strong>
-            {typeof card.delta === "number" ? <small>{formatCurrency(card.delta)}</small> : null}
-          </article>
-        ))}
-      </section>
-
-      <section className="research-toolbar panel">
-        <div>
-          <span className="metric-label">Ticker Search</span>
-          <h3>Research a new symbol before you buy</h3>
-        </div>
-
-        <form className="symbol-search" onSubmit={handleSymbolSubmit}>
-          <input
-            aria-label="Symbol"
-            className="symbol-input"
-            value={symbolInput}
-            onChange={(event) => setSymbolInput(event.target.value)}
-            placeholder="Type AAPL, NVDA, MSFT..."
-          />
-          <button className="primary-button" type="submit">
-            Load market
-          </button>
-        </form>
-
-        <div className="timeframe-strip" role="tablist" aria-label="Timeframe">
-          {timeframeOptions.map((option) => (
-            <button
-              key={option}
-              className={`timeframe-chip ${timeframe === option ? "active" : ""}`}
-              onClick={() => setTimeframe(option)}
-              type="button"
-            >
-              {option}
+        <div className="toolbar-actions-grid">
+          <form className="symbol-search" onSubmit={handleSymbolSubmit}>
+            <input
+              aria-label="Symbol"
+              className="symbol-input"
+              value={symbolInput}
+              onChange={(event) => setSymbolInput(event.target.value)}
+              placeholder="Type AAPL, NVDA, MSFT..."
+            />
+            <button className="primary-button" type="submit">
+              Load market
             </button>
-          ))}
+          </form>
+
+          <div className="timeframe-strip" role="tablist" aria-label="Timeframe">
+            {timeframeOptions.map((option) => (
+              <button
+                key={option}
+                className={`timeframe-chip ${timeframe === option ? "active" : ""}`}
+                onClick={() => setTimeframe(option)}
+                type="button"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="watchlist-strip">
@@ -313,7 +341,7 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
         </div>
       </section>
 
-      <section className="research-grid">
+      <section className="dashboard-grid dashboard-grid-primary">
         <article className="panel chart-stage">
           <div className="panel-header">
             <div>
@@ -322,13 +350,13 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
                 {marketLoading
                   ? "Loading the latest candles for this symbol."
                   : latestBar
-                  ? `${formatDateTime(latestBar.timestamp)} | Range ${formatCurrency(rangeLow)} to ${formatCurrency(rangeHigh)}`
-                  : "No market structure loaded yet."}
+                    ? `${formatDateTime(latestBar.timestamp)} | Range ${formatCurrency(rangeLow)} to ${formatCurrency(rangeHigh)}`
+                    : "No market structure loaded yet."}
               </p>
             </div>
             <div className="chart-stage-stats">
-              <span>Avg volume {averageVolume > 0 ? averageVolume.toFixed(0) : "-"}</span>
               <span>{barsSource}</span>
+              <span>{averageVolume > 0 ? `Avg volume ${averageVolume.toFixed(0)}` : "No volume yet"}</span>
             </div>
           </div>
 
@@ -336,39 +364,52 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
           <CandlestickChart bars={bars} symbol={selectedSymbol} sourceLabel={barsSource} />
         </article>
 
-        <aside className="panel research-sidebar">
-          <div className="panel-header">
-            <div>
-              <h3>Buy research brief</h3>
-              <p>Signal, model and backtest context for the current symbol.</p>
-            </div>
-          </div>
-
-          <div className="research-score-card">
+        <aside className="research-sidebar">
+          <section className="panel research-score-card">
             <span className="metric-label">Suggested action</span>
             <strong>{getOpportunityLabel(selectedSignal, convictionScore)}</strong>
             <p>
               {selectedSignal?.reason ??
-                "No explicit rationale stored for this symbol. Use the candle structure and model context below."}
+                "No explicit rationale is stored for this symbol yet. Use the price structure and cross-check the model and backtest context below."}
             </p>
-          </div>
 
-          <div className="research-checklist">
-            {researchRows.map((row) => (
-              <div className="check-row" key={row.label}>
-                <div>
-                  <span className="metric-label">{row.label}</span>
-                  <strong>{row.value}</strong>
+            <div className="research-checklist">
+              {researchRows.map((row) => (
+                <div className="check-row" key={row.label}>
+                  <div>
+                    <span className="metric-label">{row.label}</span>
+                    <strong>{row.value}</strong>
+                  </div>
+                  <div className={`research-note ${row.tone}`}>{row.note}</div>
                 </div>
-                <div className={`research-note ${row.tone}`}>{row.note}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </section>
 
-          <div className="buy-candidate-list">
+          <section className="panel">
             <div className="panel-header">
-              <h3>Stocks to research now</h3>
-              <p>Ranked directly from the latest signal tape.</p>
+              <div>
+                <h3>Market pulse</h3>
+                <p>Quick context from the loaded candle window and stored research outputs.</p>
+              </div>
+            </div>
+            <div className="insight-grid">
+              {marketPulse.map((item) => (
+                <div className="insight-card" key={item.label}>
+                  <span className="metric-label">{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <small>{item.note}</small>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-header">
+              <div>
+                <h3>Research shortlist</h3>
+                <p>Names at the top of the latest signal tape.</p>
+              </div>
             </div>
             {rankedSignals.slice(0, 6).map((signal) => (
               <button
@@ -390,15 +431,17 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
                 </div>
               </button>
             ))}
-          </div>
+          </section>
         </aside>
       </section>
 
-      <section className="lower-grid">
+      <section className="dashboard-grid dashboard-grid-secondary">
         <article className="panel">
           <div className="panel-header">
-            <h3>Actionable signal tape</h3>
-            <p>Shortlist for buy-side research, pulled from the latest generated outputs.</p>
+            <div>
+              <h3>Actionable signal tape</h3>
+              <p>Shortlist for current buy-side research decisions.</p>
+            </div>
           </div>
           <DataTable
             columns={["Symbol", "Bias", "Confidence", "Why it matters", "Time"]}
@@ -416,17 +459,49 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
 
         <article className="panel">
           <div className="panel-header">
-            <h3>Portfolio confirmation</h3>
-            <p>Equity curve stays visible so buy ideas remain tied to real system behavior.</p>
+            <div>
+              <h3>Equity confirmation</h3>
+              <p>Keep the research tape tied to actual stored system behavior.</p>
+            </div>
           </div>
           <LineChart
             data={(snapshot?.equity_curve ?? []).map((point) => ({
               timestamp: point.timestamp,
               value: point.equity ?? 0,
             }))}
-            stroke="#76f9b5"
+            stroke="#2563eb"
             formatValue={formatCurrency}
           />
+        </article>
+      </section>
+
+      <section className="dashboard-grid dashboard-grid-secondary">
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h3>Win / loss distribution</h3>
+              <p>Distribution of stored strategy outcomes from the current dashboard snapshot.</p>
+            </div>
+          </div>
+          <BarChart data={snapshot?.win_loss_distribution ?? []} />
+        </article>
+
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h3>Decision context</h3>
+              <p>Model, signal, and timestamp markers to keep the thesis grounded.</p>
+            </div>
+          </div>
+          <div className="insight-grid">
+            {decisionCards.map((item) => (
+              <div className="insight-card" key={item.label}>
+                <span className="metric-label">{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.note}</small>
+              </div>
+            ))}
+          </div>
         </article>
       </section>
 
