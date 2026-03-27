@@ -9,9 +9,20 @@ from app.schemas.features import (
     FeatureMaterializationResponse,
     FeatureRowResponse,
 )
-from app.services.feature_service import get_feature_rows, materialize_features
 
 router = APIRouter(prefix="/features")
+
+
+def materialize_features(*args, **kwargs):
+    from app.services.feature_service import materialize_features as service
+
+    return service(*args, **kwargs)
+
+
+def get_feature_rows(*args, **kwargs):
+    from app.services.feature_service import get_feature_rows as service
+
+    return service(*args, **kwargs)
 
 
 @router.post("/materialize", response_model=FeatureMaterializationResponse)

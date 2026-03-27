@@ -3,14 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from fastapi.testclient import TestClient
-
 from app.services.finnhub.historical import FinnhubCandleBar
 from app.services.finnhub.market import FinnhubMarketStatus
 
 
-def test_market_data_backfill_and_query(client: TestClient) -> None:
-    response = client.post(
+def test_market_data_backfill_and_query(authenticated_client) -> None:
+    response = authenticated_client.post(
         "/api/v1/market-data/backfill",
         json={
             "symbol": "AAPL",
@@ -23,7 +21,7 @@ def test_market_data_backfill_and_query(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["inserted"] > 0
 
-    bars_response = client.get(
+    bars_response = authenticated_client.get(
         "/api/v1/market-data/bars",
         params={"symbol": "AAPL", "timeframe": "1min", "limit": 25},
     )
@@ -33,8 +31,8 @@ def test_market_data_backfill_and_query(client: TestClient) -> None:
     assert payload[0]["symbol"] == "AAPL"
 
 
-def test_market_data_backfill_supports_finnhub_source(client: TestClient, monkeypatch) -> None:
-    client.app.state.settings.finnhub_api_key = "test-token"
+def test_market_data_backfill_supports_finnhub_source(authenticated_client, monkeypatch) -> None:
+    authenticated_client.app.state.settings.finnhub_api_key = "test-token"
 
     def fake_finnhub_bars(*args, **kwargs) -> list[FinnhubCandleBar]:
         return [
@@ -58,7 +56,7 @@ def test_market_data_backfill_supports_finnhub_source(client: TestClient, monkey
 
     monkeypatch.setattr("app.services.market_data_service.normalize_finnhub_candles", fake_finnhub_bars)
 
-    response = client.post(
+    response = authenticated_client.post(
         "/api/v1/market-data/backfill",
         json={
             "symbol": "MSFT",
@@ -73,8 +71,8 @@ def test_market_data_backfill_supports_finnhub_source(client: TestClient, monkey
     assert response.json()["inserted"] == 2
 
 
-def test_market_status_endpoint_uses_finnhub(client: TestClient, monkeypatch) -> None:
-    client.app.state.settings.finnhub_api_key = "test-token"
+def test_market_status_endpoint_uses_finnhub(authenticated_client, monkeypatch) -> None:
+    authenticated_client.app.state.settings.finnhub_api_key = "test-token"
 
     def fake_market_status(*args, **kwargs) -> tuple[FinnhubMarketStatus, str]:
         return (
@@ -91,7 +89,7 @@ def test_market_status_endpoint_uses_finnhub(client: TestClient, monkeypatch) ->
 
     monkeypatch.setattr("app.api.routes.market_data.get_market_status", fake_market_status)
 
-    response = client.get("/api/v1/market-data/market-status", params={"exchange": "US"})
+    response = authenticated_client.get("/api/v1/market-data/market-status", params={"exchange": "US"})
     assert response.status_code == 200
     payload = response.json()
     assert payload["provider"] == "finnhub"

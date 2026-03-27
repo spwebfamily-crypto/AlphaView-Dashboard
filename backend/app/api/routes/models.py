@@ -5,9 +5,32 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
 from app.schemas.models import InferenceResponse, ModelRunResponse, TrainResponse, TrainingRequest
-from app.services.model_service import latest_inference, list_model_runs, serialize_model_run, train_baseline_models
 
 router = APIRouter(prefix="/models")
+
+
+def train_baseline_models(*args, **kwargs):
+    from app.services.model_service import train_baseline_models as service
+
+    return service(*args, **kwargs)
+
+
+def list_model_runs(*args, **kwargs):
+    from app.services.model_service import list_model_runs as service
+
+    return service(*args, **kwargs)
+
+
+def serialize_model_run(*args, **kwargs):
+    from app.services.model_service import serialize_model_run as service
+
+    return service(*args, **kwargs)
+
+
+def latest_inference(*args, **kwargs):
+    from app.services.model_service import latest_inference as service
+
+    return service(*args, **kwargs)
 
 
 @router.post("/train", response_model=TrainResponse)

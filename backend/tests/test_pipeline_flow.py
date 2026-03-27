@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -46,8 +45,8 @@ def test_feature_materialization_has_no_future_leakage(db_session: Session) -> N
     assert same_timestamp_row.features == anchor_features
 
 
-def test_training_signal_and_backtest_flow(client: TestClient) -> None:
-    client.post(
+def test_training_signal_and_backtest_flow(authenticated_client) -> None:
+    authenticated_client.post(
         "/api/v1/market-data/backfill",
         json={
             "symbol": "MSFT",
@@ -57,14 +56,14 @@ def test_training_signal_and_backtest_flow(client: TestClient) -> None:
             "source": "synthetic",
         },
     )
-    feature_response = client.post(
+    feature_response = authenticated_client.post(
         "/api/v1/features/materialize",
         json={"symbol": "MSFT", "timeframe": "1min", "pipeline_version": "v1"},
     )
     assert feature_response.status_code == 200
     assert feature_response.json()["rows_materialized"] > 0
 
-    model_response = client.post(
+    model_response = authenticated_client.post(
         "/api/v1/models/train",
         json={"symbol": "MSFT", "timeframe": "1min", "pipeline_version": "v1"},
     )
@@ -72,14 +71,14 @@ def test_training_signal_and_backtest_flow(client: TestClient) -> None:
     model_payload = model_response.json()
     assert len(model_payload["runs"]) == 2
 
-    signal_response = client.post(
+    signal_response = authenticated_client.post(
         "/api/v1/signals/generate",
         json={"symbol": "MSFT", "timeframe": "1min"},
     )
     assert signal_response.status_code == 200
     assert len(signal_response.json()) > 0
 
-    backtest_response = client.post(
+    backtest_response = authenticated_client.post(
         "/api/v1/backtests/run",
         json={"symbol": "MSFT", "timeframe": "1min"},
     )
@@ -89,18 +88,18 @@ def test_training_signal_and_backtest_flow(client: TestClient) -> None:
     assert len(backtest_payload["trades"]) > 0
 
 
-def test_paper_broker_order_flow(client: TestClient) -> None:
-    order_response = client.post(
+def test_paper_broker_order_flow(authenticated_client) -> None:
+    order_response = authenticated_client.post(
         "/api/v1/broker/orders",
         json={"symbol": "NVDA", "side": "BUY", "quantity": 10, "order_type": "market"},
     )
     assert order_response.status_code == 200
     assert order_response.json()["status"] == "filled"
 
-    positions_response = client.get("/api/v1/broker/positions")
+    positions_response = authenticated_client.get("/api/v1/broker/positions")
     assert positions_response.status_code == 200
     assert len(positions_response.json()) >= 1
 
-    executions_response = client.get("/api/v1/broker/executions")
+    executions_response = authenticated_client.get("/api/v1/broker/executions")
     assert executions_response.status_code == 200
     assert len(executions_response.json()) >= 1

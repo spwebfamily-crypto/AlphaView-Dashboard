@@ -1069,6 +1069,234 @@ strong {
   border: 1px solid var(--line);
 }
 
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.account-chip span {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.ghost-button,
+.auth-submit,
+.auth-mode-button {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.ghost-button {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font-weight: 700;
+}
+
+.ghost-button:hover:not(:disabled),
+.auth-submit:hover:not(:disabled),
+.auth-mode-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.ghost-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.page-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.withdrawal-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.withdrawal-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.withdrawal-card strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.withdrawal-meta {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: end;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.14), transparent 26%),
+    linear-gradient(180deg, #eff6ff 0%, #dbeafe 48%, #e2e8f0 100%);
+}
+
+.auth-card {
+  width: min(100%, 34rem);
+  padding: 2rem;
+  border-radius: 1.8rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 1.35rem;
+}
+
+.auth-card-loading {
+  text-align: center;
+}
+
+.auth-copy h1 {
+  margin: 0.3rem 0 0.5rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1;
+}
+
+.auth-copy p,
+.auth-note p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.auth-mode-button {
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+}
+
+.auth-mode-button.active {
+  background: linear-gradient(135deg, var(--blue), #38bdf8);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.auth-field span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.auth-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+  outline: none;
+}
+
+.auth-field input:focus {
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.auth-field.slim input {
+  padding: 0.85rem 1rem;
+}
+
+.auth-submit {
+  border: 0;
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+  background: linear-gradient(135deg, #0f172a, #2563eb);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.auth-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.auth-error,
+.auth-success {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.92rem;
+}
+
+.auth-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.auth-success {
+  background: #dcfce7;
+  color: #047857;
+  border: 1px solid #bbf7d0;
+}
+
+.auth-note {
+  padding: 1rem 1.05rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: linear-gradient(160deg, #f8fafc, #eff6ff);
+}
+
+.auth-note strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
 @media (max-width: 1320px) {
   .header-stat-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1143,7 +1371,8 @@ strong {
   }
 
   .check-row,
-  .candidate-row {
+  .candidate-row,
+  .withdrawal-card {
     flex-direction: column;
   }
 
@@ -1158,6 +1387,11 @@ strong {
 
   .candle-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .withdrawal-meta {
+    justify-items: start;
+    text-align: left;
   }
 }
 
@@ -1175,7 +1409,8 @@ strong {
   }
 
   .panel,
-  .market-toolbar {
+  .market-toolbar,
+  .auth-card {
     padding: 1rem;
   }
 

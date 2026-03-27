@@ -133,6 +133,35 @@ docker compose up --build
 
 ---
 
+## 🔐 Login e Saques
+
+- O frontend agora exige autenticação antes de carregar o dashboard.
+- O backend cria utilizadores reais em base de dados e usa cookies `HttpOnly` com sessões revogáveis.
+- O menu **Account** concentra onboarding Stripe Connect, sincronização de estado e pedidos de saque.
+- `WITHDRAWALS_ENABLED=false` continua a ser o default. Ative explicitamente para testar saques.
+- O saldo sacável é um ledger dedicado; PnL simulado de PAPER trading não vira dinheiro real automaticamente.
+
+### Variáveis novas
+
+```env
+ALLOW_PUBLIC_REGISTRATION=true
+AUTH_SECRET_KEY=change-me-in-production
+WITHDRAWALS_ENABLED=false
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+FRONTEND_BASE_URL=http://localhost:5173
+```
+
+### Fluxo recomendado
+
+1. Copie `.env.example` para `.env` e preencha as variáveis de auth e Stripe.
+2. Suba a stack com `docker compose up --build`.
+3. Crie a primeira conta no ecrã de login do frontend.
+4. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
+5. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
+
+---
+
 ## 🎮 Demo Flow - Ambiente Completo
 
 Para popular o sistema com dados de demonstração/vendas:
@@ -222,6 +251,9 @@ python -m app.workers.retrain_worker `
 
 | Método | Endpoint | Descrição |
 |--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Criar conta do dashboard |
+| `POST` | `/api/v1/auth/login` | Autenticar utilizador |
+| `GET` | `/api/v1/auth/me` | Obter utilizador autenticado |
 | `POST` | `/api/v1/market-data/backfill` | Backfill de dados históricos |
 | `GET` | `/api/v1/market-data/bars` | Consultar barras OHLCV |
 | `POST` | `/api/v1/features/materialize` | Materializar features |
@@ -233,6 +265,9 @@ python -m app.workers.retrain_worker `
 | `POST` | `/api/v1/broker/orders` | Criar ordem |
 | `GET` | `/api/v1/demo/snapshot` | Snapshot de demonstração |
 | `POST` | `/api/v1/demo/seed` | Popular dados de demo |
+| `GET` | `/api/v1/wallet/summary` | Resumo do saldo sacável e estado Stripe |
+| `POST` | `/api/v1/wallet/stripe/onboarding-link` | Criar/retomar onboarding Stripe Connect |
+| `POST` | `/api/v1/wallet/withdrawals` | Pedir saque |
 
 ---
 

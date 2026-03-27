@@ -16,6 +16,7 @@ def test_settings(tmp_path) -> Settings:
         app_env="test",
         execution_mode=ExecutionMode.PAPER,
         enable_live_trading=False,
+        auth_secret_key="test-secret-key",
         database_url="sqlite+pysqlite:///:memory:",
         backend_cors_origins=["http://testserver"],
         artifact_root=str(tmp_path / "reports"),
@@ -38,3 +39,17 @@ def db_session(client: TestClient) -> Session:
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture
+def authenticated_client(client: TestClient) -> TestClient:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "trader@example.com",
+            "password": "Password123!",
+            "full_name": "Trader Test",
+        },
+    )
+    assert response.status_code == 201
+    return client

@@ -11,6 +11,8 @@ from app.models.signal import Signal
 from app.models.symbol import Symbol
 from app.models.system_log import SystemLog
 from app.models.user import User
+from app.models.user_session import UserSession
+from app.models.withdrawal_request import WithdrawalRequest
 
 __all__ = [
     "BacktestRun",
@@ -26,5 +28,7 @@ __all__ = [
     "Symbol",
     "SystemLog",
     "User",
+    "UserSession",
+    "WithdrawalRequest",
 ]
 

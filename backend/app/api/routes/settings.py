@@ -3,9 +3,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from app.schemas.settings import RuntimeSettingsResponse
-from app.services.market_data_service import configured_market_data_sources
 
 router = APIRouter(prefix="/settings")
+
+
+def configured_market_data_sources(*args, **kwargs):
+    from app.services.market_data_service import configured_market_data_sources as service
+
+    return service(*args, **kwargs)
 
 
 @router.get("/runtime", response_model=RuntimeSettingsResponse)

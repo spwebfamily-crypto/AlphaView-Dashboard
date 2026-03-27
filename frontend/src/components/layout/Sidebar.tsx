@@ -1,4 +1,13 @@
-export type PageKey = "overview" | "signals" | "positions" | "trades" | "backtests" | "models" | "logs" | "settings";
+export type PageKey =
+  | "overview"
+  | "signals"
+  | "positions"
+  | "trades"
+  | "backtests"
+  | "models"
+  | "logs"
+  | "account"
+  | "settings";
 
 type SidebarProps = {
   activePage: PageKey;
@@ -13,6 +22,7 @@ const navItems: Array<{ key: PageKey; label: string; hint: string; marker: strin
   { key: "backtests", label: "Backtests", hint: "Equity curve and run archive", marker: "BT" },
   { key: "models", label: "Models", hint: "Model registry and diagnostics", marker: "ML" },
   { key: "logs", label: "Logs", hint: "Recent system events", marker: "LG" },
+  { key: "account", label: "Account", hint: "Login, payouts, Stripe Connect", marker: "AC" },
   { key: "settings", label: "Settings", hint: "Runtime and provider status", marker: "ST" },
 ];
 

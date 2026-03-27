@@ -5,9 +5,20 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
 from app.schemas.demo import DashboardSnapshot, DemoSeedRequest, SummaryCard
-from app.services.demo_service import dashboard_snapshot, seed_demo_environment
 
 router = APIRouter(prefix="/demo")
+
+
+def seed_demo_environment(*args, **kwargs):
+    from app.services.demo_service import seed_demo_environment as service
+
+    return service(*args, **kwargs)
+
+
+def dashboard_snapshot(*args, **kwargs):
+    from app.services.demo_service import dashboard_snapshot as service
+
+    return service(*args, **kwargs)
 
 
 @router.post("/seed")

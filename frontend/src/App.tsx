@@ -2,15 +2,20 @@ import { useEffect, useState } from "react";
 
 import {
   fetchBrokerStatus,
+  fetchCurrentUser,
   fetchDashboardSnapshot,
   fetchExecutions,
   fetchHealth,
   fetchOrders,
   fetchRuntimeSettings,
+  logoutAccount,
+  refreshCurrentSession,
   seedDemoData,
 } from "./api/client";
+import { AuthScreen } from "./components/auth/AuthScreen";
 import { AppShell, type ShellStatCard } from "./components/layout/AppShell";
 import type { PageKey } from "./components/layout/Sidebar";
+import { Account } from "./pages/Account";
 import { Backtests } from "./pages/Backtests";
 import { LiveSignals } from "./pages/LiveSignals";
 import { Logs } from "./pages/Logs";
@@ -19,6 +24,7 @@ import { Overview } from "./pages/Overview";
 import { Positions } from "./pages/Positions";
 import { Settings } from "./pages/Settings";
 import { Trades } from "./pages/Trades";
+import type { AuthSession, AuthUser } from "./types/auth";
 import type { BrokerStatus, Execution, Order } from "./types/broker";
 import type { DashboardBacktest, DashboardSnapshot, SummaryCard } from "./types/dashboard";
 import type { HealthResponse } from "./types/health";
@@ -60,6 +66,11 @@ const pageCopy: Record<PageKey, { eyebrow: string; title: string; description: s
     eyebrow: "System events",
     title: "Operational logs",
     description: "Audit ingestion, training, backtesting, and simulation messages in one place.",
+  },
+  account: {
+    eyebrow: "Identity and payouts",
+    title: "Account and withdrawals",
+    description: "Manage secure access, Stripe Connect onboarding, and withdrawal requests from one page.",
   },
   settings: {
     eyebrow: "Runtime controls",
@@ -137,7 +148,14 @@ function getHeaderCards(snapshot: DashboardSnapshot | null, runtime: RuntimeSett
   ];
 }
 
+function getInitialPage(): PageKey {
+  return new URLSearchParams(window.location.search).get("stripe") ? "account" : "overview";
+}
+
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [runtime, setRuntime] = useState<RuntimeSettings | null>(null);
@@ -147,9 +165,53 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activePage, setActivePage] = useState<PageKey>("overview");
+  const [activePage, setActivePage] = useState<PageKey>(getInitialPage);
 
   useEffect(() => {
+    let active = true;
+
+    async function restoreSession() {
+      try {
+        let user: AuthUser;
+        try {
+          user = await fetchCurrentUser();
+        } catch (caughtError) {
+          const message = caughtError instanceof Error ? caughtError.message : "Authentication unavailable.";
+          if (message !== "Authentication required.") {
+            throw caughtError;
+          }
+          const session = await refreshCurrentSession();
+          user = session.user;
+        }
+        if (active) {
+          setCurrentUser(user);
+          setAuthError(null);
+        }
+      } catch (caughtError) {
+        if (active) {
+          setCurrentUser(null);
+          const message = caughtError instanceof Error ? caughtError.message : "Authentication unavailable.";
+          setAuthError(message === "Authentication required." ? null : message);
+        }
+      } finally {
+        if (active) {
+          setAuthLoading(false);
+        }
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
     let active = true;
 
     async function loadData() {
@@ -175,7 +237,18 @@ export default function App() {
         }
       } catch (caughtError) {
         if (active) {
-          setError(caughtError instanceof Error ? caughtError.message : "Unknown API error");
+          const message = caughtError instanceof Error ? caughtError.message : "Unknown API error";
+          if (message === "Authentication required.") {
+            setCurrentUser(null);
+            setAuthError(null);
+            setSnapshot(null);
+            setRuntime(null);
+            setBrokerStatus(null);
+            setOrders([]);
+            setExecutions([]);
+          } else {
+            setError(message);
+          }
         }
       } finally {
         if (active) {
@@ -184,12 +257,34 @@ export default function App() {
       }
     }
 
+    setLoading(true);
     void loadData();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [currentUser]);
+
+  async function handleAuthenticated(session: AuthSession) {
+    setCurrentUser(session.user);
+    setAuthError(null);
+    setActivePage(getInitialPage());
+  }
+
+  async function handleSignOut() {
+    try {
+      await logoutAccount();
+    } finally {
+      setCurrentUser(null);
+      setSnapshot(null);
+      setRuntime(null);
+      setBrokerStatus(null);
+      setOrders([]);
+      setExecutions([]);
+      setError(null);
+      setActivePage("overview");
+    }
+  }
 
   async function handleSeedDemo() {
     try {
@@ -204,13 +299,22 @@ export default function App() {
       setOrders(orderPayload);
       setExecutions(executionPayload);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Demo seed failed");
+      const message = caughtError instanceof Error ? caughtError.message : "Demo seed failed";
+      if (message === "Authentication required.") {
+        setCurrentUser(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setSeeding(false);
     }
   }
 
   function renderPage() {
+    if (!currentUser) {
+      return null;
+    }
+
     switch (activePage) {
       case "signals":
         return <LiveSignals snapshot={snapshot} />;
@@ -224,6 +328,8 @@ export default function App() {
         return <Models snapshot={snapshot} />;
       case "logs":
         return <Logs snapshot={snapshot} />;
+      case "account":
+        return <Account user={currentUser} />;
       case "settings":
         return (
           <Settings
@@ -239,6 +345,22 @@ export default function App() {
     }
   }
 
+  if (authLoading) {
+    return (
+      <div className="auth-shell">
+        <section className="auth-card auth-card-loading">
+          <span className="eyebrow">Loading session</span>
+          <h1>Checking secure access</h1>
+          <p>Restoring your dashboard session and validating the database-backed login.</p>
+        </section>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen onAuthenticated={handleAuthenticated} initialError={authError} />;
+  }
+
   const activeCopy = pageCopy[activePage];
 
   return (
@@ -252,6 +374,8 @@ export default function App() {
       description={activeCopy.description}
       generatedAt={snapshot?.generated_at}
       headerCards={getHeaderCards(snapshot, runtime)}
+      userLabel={currentUser.full_name ?? currentUser.email}
+      onSignOut={handleSignOut}
     >
       {renderPage()}
     </AppShell>

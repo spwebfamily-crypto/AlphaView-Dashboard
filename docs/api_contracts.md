@@ -5,6 +5,25 @@
 - `GET /api/v1/health`
 - Returns service status, environment, execution mode, live-trading flag, and database status.
 
+## Auth
+
+- `POST /api/v1/auth/register`
+- Inputs: `email`, `password`, optional `full_name`
+- Creates a real user record in the database, validates password strength, opens a revocable session, and sets `HttpOnly` cookies
+
+- `POST /api/v1/auth/login`
+- Inputs: `email`, `password`
+- Authenticates the dashboard user and rotates into a fresh database-backed session
+
+- `POST /api/v1/auth/refresh`
+- Rotates the refresh session and renews the access cookie without exposing tokens to the frontend runtime
+
+- `POST /api/v1/auth/logout`
+- Revokes the stored session and clears auth cookies
+
+- `GET /api/v1/auth/me`
+- Returns the current authenticated user profile used by the dashboard shell
+
 ## Market data
 
 - `POST /api/v1/market-data/backfill`
@@ -100,3 +119,24 @@
 
 - `GET /api/v1/logs`
 - Returns recent structured system logs
+
+## Wallet / Stripe
+
+- `GET /api/v1/wallet/summary`
+- Returns withdrawable balance, configured currency, withdrawal-engine flag, and Stripe Connect status
+
+- `GET /api/v1/wallet/withdrawals`
+- Lists persisted withdrawal requests for the authenticated user
+
+- `POST /api/v1/wallet/stripe/onboarding-link`
+- Creates or resumes a Stripe Connect recipient account and returns a hosted onboarding URL
+
+- `POST /api/v1/wallet/stripe/refresh`
+- Pulls the latest Stripe Connect account status into the local database
+
+- `POST /api/v1/wallet/stripe/dashboard-link`
+- Returns a Stripe Express dashboard login link for the connected account
+
+- `POST /api/v1/wallet/withdrawals`
+- Inputs: `amount_cents`
+- Validates withdrawable cash, checks Stripe onboarding and platform balance, then creates a transfer and payout attempt in test mode when enabled

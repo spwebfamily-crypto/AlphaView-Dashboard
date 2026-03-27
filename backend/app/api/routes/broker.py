@@ -14,10 +14,19 @@ from app.schemas.broker import (
     OrderResponse,
     PositionResponse,
 )
-from app.services import broker_service
 from app.utils.serializers import to_float
 
 router = APIRouter(prefix="/broker")
+
+
+class _BrokerServiceProxy:
+    def __getattr__(self, name: str):
+        from app.services import broker_service as service
+
+        return getattr(service, name)
+
+
+broker_service = _BrokerServiceProxy()
 
 
 @router.get("/status", response_model=BrokerStatusResponse)

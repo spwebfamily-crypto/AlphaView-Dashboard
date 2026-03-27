@@ -1,22 +1,74 @@
+import type { AuthSession, AuthUser } from "../types/auth";
 import type { BrokerStatus, Execution, Order } from "../types/broker";
 import type { DashboardSnapshot } from "../types/dashboard";
 import type { HealthResponse } from "../types/health";
 import type { MarketBar, StreamPreview } from "../types/marketData";
 import type { MarketStatus } from "../types/marketStatus";
 import type { RuntimeSettings } from "../types/runtime";
+import type { WalletSummary, WithdrawalRequest } from "../types/wallet";
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(/\/$/, "");
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+let refreshInFlight: Promise<void> | null = null;
+
+async function attemptRefresh(): Promise<void> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${apiBaseUrl}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Authentication required.");
+        }
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+
+  return refreshInFlight;
+}
+
+async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+  options?: { retryOnAuth?: boolean },
+): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
     },
     ...init,
   });
-  if (!response.ok) {
-    throw new Error(`${path} failed with status ${response.status}`);
+
+  if (response.status === 401 && options?.retryOnAuth !== false && !path.startsWith("/auth/")) {
+    await attemptRefresh();
+    return apiFetch<T>(path, init, { retryOnAuth: false });
   }
+
+  if (!response.ok) {
+    let detail = `${path} failed with status ${response.status}`;
+    try {
+      const payload = (await response.json()) as { detail?: string };
+      if (payload.detail) {
+        detail = payload.detail;
+      }
+    } catch {
+      // Keep the fallback message.
+    }
+    throw new Error(detail);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
@@ -34,6 +86,56 @@ function buildQuery(params: Record<string, string | number | undefined>) {
 
 export async function fetchHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/health");
+}
+
+export async function registerAccount(payload: {
+  email: string;
+  password: string;
+  full_name?: string;
+}): Promise<AuthSession> {
+  return apiFetch<AuthSession>(
+    "/auth/register",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { retryOnAuth: false },
+  );
+}
+
+export async function loginAccount(payload: { email: string; password: string }): Promise<AuthSession> {
+  return apiFetch<AuthSession>(
+    "/auth/login",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { retryOnAuth: false },
+  );
+}
+
+export async function logoutAccount(): Promise<void> {
+  await apiFetch<{ message: string }>(
+    "/auth/logout",
+    {
+      method: "POST",
+    },
+    { retryOnAuth: false },
+  );
+}
+
+export async function fetchCurrentUser(): Promise<AuthUser> {
+  return apiFetch<AuthUser>("/auth/me", undefined, { retryOnAuth: false });
+}
+
+export async function refreshCurrentSession(): Promise<AuthSession> {
+  return apiFetch<AuthSession>(
+    "/auth/refresh",
+    {
+      method: "POST",
+    },
+    { retryOnAuth: false },
+  );
 }
 
 export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
@@ -90,4 +192,37 @@ export async function fetchMarketPreview(symbol: string, timeframe = "1min", poi
 export async function fetchMarketStatus(exchange = "US"): Promise<MarketStatus> {
   const query = buildQuery({ exchange: exchange.toUpperCase() });
   return apiFetch<MarketStatus>(`/market-data/market-status?${query}`);
+}
+
+export async function fetchWalletSummary(): Promise<WalletSummary> {
+  return apiFetch<WalletSummary>("/wallet/summary");
+}
+
+export async function fetchWithdrawals(): Promise<WithdrawalRequest[]> {
+  return apiFetch<WithdrawalRequest[]>("/wallet/withdrawals");
+}
+
+export async function createStripeOnboardingLink(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/wallet/stripe/onboarding-link", {
+    method: "POST",
+  });
+}
+
+export async function refreshStripeStatus(): Promise<WalletSummary> {
+  return apiFetch<WalletSummary>("/wallet/stripe/refresh", {
+    method: "POST",
+  });
+}
+
+export async function createStripeDashboardLink(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/wallet/stripe/dashboard-link", {
+    method: "POST",
+  });
+}
+
+export async function createWithdrawal(amountCents: number): Promise<WithdrawalRequest> {
+  return apiFetch<WithdrawalRequest>("/wallet/withdrawals", {
+    method: "POST",
+    body: JSON.stringify({ amount_cents: amountCents }),
+  });
 }

@@ -13,11 +13,33 @@ from app.schemas.market_data import (
     MarketStatusResponse,
     StreamPreviewResponse,
 )
-from app.services.market_data_service import backfill_market_data, get_bars, get_market_status
-from app.services.polygon.stream import preview_stream
 from app.utils.serializers import to_float
 
 router = APIRouter(prefix="/market-data")
+
+
+def backfill_market_data(*args, **kwargs):
+    from app.services.market_data_service import backfill_market_data as service
+
+    return service(*args, **kwargs)
+
+
+def get_bars(*args, **kwargs):
+    from app.services.market_data_service import get_bars as service
+
+    return service(*args, **kwargs)
+
+
+def get_market_status(*args, **kwargs):
+    from app.services.market_data_service import get_market_status as service
+
+    return service(*args, **kwargs)
+
+
+def preview_stream(*args, **kwargs):
+    from app.services.polygon.stream import preview_stream as service
+
+    return service(*args, **kwargs)
 
 
 @router.post("/backfill", response_model=BackfillResponse)

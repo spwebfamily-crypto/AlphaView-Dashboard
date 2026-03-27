@@ -5,9 +5,20 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
 from app.schemas.signals import SignalGenerationRequest, SignalResponse
-from app.services.signal_service import generate_signals, list_signals
 
 router = APIRouter(prefix="/signals")
+
+
+def generate_signals(*args, **kwargs):
+    from app.services.signal_service import generate_signals as service
+
+    return service(*args, **kwargs)
+
+
+def list_signals(*args, **kwargs):
+    from app.services.signal_service import list_signals as service
+
+    return service(*args, **kwargs)
 
 
 @router.post("/generate", response_model=list[SignalResponse])

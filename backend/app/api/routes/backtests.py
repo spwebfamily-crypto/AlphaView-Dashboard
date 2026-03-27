@@ -5,10 +5,27 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
 from app.schemas.backtests import BacktestRequest, BacktestRunResponse, BacktestTradeResponse, EquityPoint
-from app.services.backtest_service import backtest_detail, list_backtests, run_backtest
 from app.utils.serializers import to_float
 
 router = APIRouter(prefix="/backtests")
+
+
+def run_backtest(*args, **kwargs):
+    from app.services.backtest_service import run_backtest as service
+
+    return service(*args, **kwargs)
+
+
+def list_backtests(*args, **kwargs):
+    from app.services.backtest_service import list_backtests as service
+
+    return service(*args, **kwargs)
+
+
+def backtest_detail(*args, **kwargs):
+    from app.services.backtest_service import backtest_detail as service
+
+    return service(*args, **kwargs)
 
 
 @router.post("/run", response_model=BacktestRunResponse)

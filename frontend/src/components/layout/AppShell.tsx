@@ -23,6 +23,8 @@ type AppShellProps = {
   description: string;
   generatedAt?: string | null;
   headerCards: ShellStatCard[];
+  userLabel: string;
+  onSignOut: () => void;
 };
 
 function getInitials(label: string) {
@@ -45,6 +47,8 @@ export function AppShell({
   description,
   generatedAt,
   headerCards,
+  userLabel,
+  onSignOut,
 }: AppShellProps) {
   return (
     <div className="app-shell">
@@ -59,6 +63,12 @@ export function AppShell({
           </div>
 
           <div className="topbar-actions">
+            <div className="account-chip">
+              <span>{userLabel}</span>
+              <button className="ghost-button" onClick={onSignOut} type="button">
+                Sign out
+              </button>
+            </div>
             <div className="topbar-status">
               <span className={`status-indicator ${apiStatus === "online" ? "online" : "offline"}`}>
                 {apiStatus === "online" ? "API online" : "API degraded"}
