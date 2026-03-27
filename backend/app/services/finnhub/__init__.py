@@ -1,0 +1,1 @@
+"""Finnhub market-data adapters."""

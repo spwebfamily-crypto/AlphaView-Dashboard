@@ -1,0 +1,10 @@
+[project]
+name = "alphaview-backend"
+version = "0.1.0"
+description = "Backend API for the AlphaView equities research and paper-trading platform."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+

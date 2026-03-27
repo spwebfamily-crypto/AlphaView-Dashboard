@@ -1,0 +1,9 @@
+{
+  "mode": "DEMO",
+  "summary": {
+    "portfolioValue": 100000,
+    "dailyPnL": 0,
+    "openPositions": 0,
+    "latestSignal": "HOLD"
+  }
+}

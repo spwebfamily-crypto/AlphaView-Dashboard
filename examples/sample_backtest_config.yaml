@@ -1,0 +1,11 @@
+symbol: AAPL
+timeframe: 1min
+trade_size: 10000
+transaction_cost_bps: 1.0
+slippage_bps: 2.0
+stop_loss_pct: 0.02
+take_profit_pct: 0.04
+max_daily_loss: 1500
+max_position_size: 10000
+cooldown_minutes: 15
+max_exposure_per_symbol: 10000
