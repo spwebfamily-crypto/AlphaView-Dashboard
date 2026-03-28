@@ -15,6 +15,18 @@ def test_settings_default_to_paper_mode() -> None:
     assert settings.eodhd_base_url == "https://eodhd.com/api"
 
 
+def test_postgresql_database_url_is_normalized_to_psycopg_driver() -> None:
+    settings = Settings(_env_file=None, database_url="postgresql://user:pass@localhost:5432/alphaview")
+
+    assert settings.database_url == "postgresql+psycopg://user:pass@localhost:5432/alphaview"
+
+
+def test_postgres_database_url_alias_is_normalized_to_psycopg_driver() -> None:
+    settings = Settings(_env_file=None, database_url="postgres://user:pass@localhost:5432/alphaview")
+
+    assert settings.database_url == "postgresql+psycopg://user:pass@localhost:5432/alphaview"
+
+
 def test_live_mode_requires_explicit_flag() -> None:
     try:
         Settings(
@@ -27,6 +39,19 @@ def test_live_mode_requires_explicit_flag() -> None:
         assert "enable_live_trading=true" in str(exc)
     else:
         raise AssertionError("Expected live-mode validation to fail")
+
+
+def test_production_requires_database_url_not_to_point_to_local_compose_host() -> None:
+    try:
+        Settings(
+            _env_file=None,
+            app_env="production",
+            database_url="postgresql+psycopg://postgres:postgres@db:5432/alphaview",
+        )
+    except ValueError as exc:
+        assert "DATABASE_URL is not configured for production" in str(exc)
+    else:
+        raise AssertionError("Expected production database URL validation to fail")
 
 
 def test_settings_use_backend_local_env_file() -> None:

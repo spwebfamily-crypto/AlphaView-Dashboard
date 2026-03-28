@@ -4,7 +4,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -97,6 +97,19 @@ class Settings(BaseSettings):
         enable_decoding=False,
     )
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if not isinstance(value, str):
+            return value
+
+        normalized = value.strip()
+        if normalized.startswith("postgres://"):
+            return normalized.replace("postgres://", "postgresql+psycopg://", 1)
+        if normalized.startswith("postgresql://"):
+            return normalized.replace("postgresql://", "postgresql+psycopg://", 1)
+        return normalized
+
     @field_validator("backend_cors_origins", mode="before")
     @classmethod
     def split_cors_origins(cls, value: str | list[str]) -> list[str]:
@@ -133,6 +146,15 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_market_status_exchange(cls, value: str) -> str:
         return value.upper()
+
+    @model_validator(mode="after")
+    def validate_production_database_url(self) -> "Settings":
+        if self.app_env.lower() == "production" and "@db:" in self.database_url:
+            raise ValueError(
+                "DATABASE_URL is not configured for production. "
+                "The current value still points to the local docker-compose host 'db'."
+            )
+        return self
 
     @property
     def artifact_root_path(self) -> Path:
