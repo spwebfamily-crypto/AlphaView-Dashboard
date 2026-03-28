@@ -10,6 +10,7 @@ services:
     buildFilter:
       paths:
         - backend/**
+        - Dockerfile
         - infra/backend.Dockerfile
         - examples/**
         - ml/**

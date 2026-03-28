@@ -49,12 +49,21 @@ def test_render_backend_dockerfile_uses_dynamic_port() -> None:
     assert "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}" in dockerfile_text
 
 
+def test_root_dockerfile_exists_for_render_default_deploys() -> None:
+    dockerfile_path = Path(__file__).resolve().parents[2] / "Dockerfile"
+    dockerfile_text = dockerfile_path.read_text(encoding="utf-8")
+
+    assert "FROM python:3.12-slim" in dockerfile_text
+    assert "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}" in dockerfile_text
+
+
 def test_render_blueprint_wires_backend_service_and_database() -> None:
     render_path = Path(__file__).resolve().parents[2] / "render.yaml"
     render_text = render_path.read_text(encoding="utf-8")
 
     assert "name: alphaview-backend" in render_text
     assert "runtime: docker" in render_text
+    assert "- Dockerfile" in render_text
     assert "dockerfilePath: ./infra/backend.Dockerfile" in render_text
     assert "healthCheckPath: /api/v1/health" in render_text
     assert "property: connectionString" in render_text

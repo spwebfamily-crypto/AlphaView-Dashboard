@@ -12,6 +12,7 @@ Este projeto já está preparado para subir o backend FastAPI no Render com Dock
   - `EXECUTION_MODE=PAPER`
   - `ENABLE_LIVE_TRADING=false`
   - `EMAIL_DELIVERY_MODE=log` para demos no plano gratuito
+- `Dockerfile` na raiz como fallback para o Render quando o serviço Docker é criado fora do fluxo de Blueprint
 - `infra/backend.Dockerfile` atualizado para respeitar a variável `PORT`
 - [backend/.env.render.example](C:/Users/Rodrigo🐐/OneDrive/Desktop/AlphaView-Dashboard/backend/.env.render.example) com os overrides mínimos
 
@@ -30,6 +31,8 @@ BACKEND_CORS_ORIGINS=https://alphaview.netlify.app
 Se o domínio do frontend mudar no futuro, ajuste esses dois valores no Render.
 
 5. Confirme a criação do serviço `alphaview-backend` e da base de dados `alphaview-db`.
+
+Se você já tiver criado um `Web Service` normal em vez de `Blueprint`, o repositório agora também funciona nesse modo porque o Render encontrará o `Dockerfile` na raiz por defeito.
 
 ## O que o Render vai criar
 
