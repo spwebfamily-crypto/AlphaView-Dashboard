@@ -3,12 +3,11 @@
   publish = "dist"
   command = """
     if [ -z "$NETLIFY_API_ORIGIN" ]; then
-      echo "NETLIFY_API_ORIGIN is required to proxy /api requests to the FastAPI backend."
-      exit 1
+      echo "Warning: NETLIFY_API_ORIGIN is not set. Skipping /api proxy target replacement and continuing with the frontend build."
+    else
+      NETLIFY_API_ORIGIN_CLEAN="${NETLIFY_API_ORIGIN%/}"
+      sed -i "s|NETLIFY_API_ORIGIN_PLACEHOLDER|${NETLIFY_API_ORIGIN_CLEAN}|g" ../netlify.toml
     fi
-
-    NETLIFY_API_ORIGIN_CLEAN="${NETLIFY_API_ORIGIN%/}"
-    sed -i "s|NETLIFY_API_ORIGIN_PLACEHOLDER|${NETLIFY_API_ORIGIN_CLEAN}|g" ../netlify.toml
     npm run build
   """
 

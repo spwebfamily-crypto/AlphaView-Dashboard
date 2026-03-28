@@ -23,6 +23,8 @@ Use o origin sem barra final.
 
 4. Faça o deploy.
 
+Se `NETLIFY_API_ORIGIN` não estiver definida, o build continua com um aviso. O dashboard estático publica na mesma, mas o proxy `/api/*` fica apontado para o placeholder e não funcionará até configurar a variável.
+
 ## Como hospedar o backend
 
 O backend deve correr noutro serviço com Python + PostgreSQL, por exemplo `Render`, `Railway`, `Fly.io` ou VPS.
@@ -70,7 +72,7 @@ https://seu-site.netlify.app/api/v1/health
 ## Limitações conhecidas
 
 - A Netlify hospeda apenas o dashboard estático; não executa o FastAPI nem o PostgreSQL deste projeto.
-- O proxy depende de `NETLIFY_API_ORIGIN`; sem essa variável o build falha de propósito para evitar deploy quebrado.
+- O proxy depende de `NETLIFY_API_ORIGIN`; sem essa variável o build continua, mas `/api/*` permanece sem backend válido.
 - WebSockets live do Polygon não passam automaticamente por esta configuração estática da Netlify.
 
 ## Próximo passo recomendado
