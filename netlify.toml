@@ -1,15 +1,7 @@
 [build]
   base = "frontend"
   publish = "dist"
-  command = """
-    if [ -z "$NETLIFY_API_ORIGIN" ]; then
-      echo "Warning: NETLIFY_API_ORIGIN is not set. Skipping /api proxy target replacement and continuing with the frontend build."
-    else
-      NETLIFY_API_ORIGIN_CLEAN="${NETLIFY_API_ORIGIN%/}"
-      sed -i "s|NETLIFY_API_ORIGIN_PLACEHOLDER|${NETLIFY_API_ORIGIN_CLEAN}|g" ../netlify.toml
-    fi
-    npm run build
-  """
+  command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -18,7 +10,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "NETLIFY_API_ORIGIN_PLACEHOLDER/api/:splat"
+  to = "https://alphaview-backend.onrender.com/api/:splat"
   status = 200
   force = true
 

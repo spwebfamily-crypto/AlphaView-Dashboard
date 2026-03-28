@@ -6,30 +6,22 @@ O `frontend` React/Vite pode ser publicado na Netlify. O `backend` FastAPI, o Po
 
 - `netlify.toml` na raiz para build de monorepo
 - rewrite SPA para `index.html`
-- proxy de `/api/*` para o backend externo usando a variável `NETLIFY_API_ORIGIN`
+- proxy de `/api/*` já apontado para `https://alphaview-backend.onrender.com`
 - build forçado em modo `PAPER`
 
 ## Como publicar na Netlify
 
 1. Ligue o repositório à Netlify.
 2. Deixe a Netlify ler o `netlify.toml` da raiz.
-3. Na UI da Netlify, adicione a variável:
+3. Faça o deploy.
 
-```env
-NETLIFY_API_ORIGIN=https://api.seu-dominio.com
-```
-
-Use o origin sem barra final.
-
-4. Faça o deploy.
-
-Se `NETLIFY_API_ORIGIN` não estiver definida, o build continua com um aviso. O dashboard estático publica na mesma, mas o proxy `/api/*` fica apontado para o placeholder e não funcionará até configurar a variável.
+O proxy `/api/*` já está configurado para o backend atual em `https://alphaview-backend.onrender.com`.
 
 ## Como hospedar o backend
 
 O backend deve correr noutro serviço com Python + PostgreSQL, por exemplo `Render`, `Railway`, `Fly.io` ou VPS.
 
-O frontend publicado na Netlify chama `/api/v1/*`. A Netlify recebe esse pedido e reencaminha para `NETLIFY_API_ORIGIN/api/v1/*`, o que mantém autenticação por cookie mais simples no browser.
+O frontend publicado na Netlify chama `/api/v1/*`. A Netlify recebe esse pedido e reencaminha para `https://alphaview-backend.onrender.com/api/v1/*`, o que mantém autenticação por cookie mais simples no browser.
 
 ## Variáveis mínimas do backend em produção
 
@@ -72,7 +64,7 @@ https://alphaview.netlify.app/api/v1/health
 ## Limitações conhecidas
 
 - A Netlify hospeda apenas o dashboard estático; não executa o FastAPI nem o PostgreSQL deste projeto.
-- O proxy depende de `NETLIFY_API_ORIGIN`; sem essa variável o build continua, mas `/api/*` permanece sem backend válido.
+- Se a URL pública do backend no Render mudar, será preciso atualizar `netlify.toml` e redeployar a Netlify.
 - WebSockets live do Polygon não passam automaticamente por esta configuração estática da Netlify.
 
 ## Próximo passo recomendado
