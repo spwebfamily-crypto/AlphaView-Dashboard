@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
@@ -149,10 +150,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_database_url(self) -> "Settings":
-        if self.app_env.lower() == "production" and "@db:" in self.database_url:
+        running_on_render = os.getenv("RENDER", "").lower() == "true"
+        if (self.app_env.lower() == "production" or running_on_render) and "@db:" in self.database_url:
             raise ValueError(
                 "DATABASE_URL is not configured for production. "
-                "The current value still points to the local docker-compose host 'db'."
+                "The current value still points to the local docker-compose host 'db'. "
+                "Set DATABASE_URL to the Render Postgres internal connection string."
             )
         return self
 

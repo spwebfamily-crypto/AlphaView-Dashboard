@@ -54,6 +54,20 @@ def test_production_requires_database_url_not_to_point_to_local_compose_host() -
         raise AssertionError("Expected production database URL validation to fail")
 
 
+def test_render_runtime_requires_database_url_not_to_point_to_local_compose_host(monkeypatch) -> None:
+    monkeypatch.setenv("RENDER", "true")
+    try:
+        Settings(
+            _env_file=None,
+            app_env="development",
+            database_url="postgresql+psycopg://postgres:postgres@db:5432/alphaview",
+        )
+    except ValueError as exc:
+        assert "Set DATABASE_URL to the Render Postgres internal connection string." in str(exc)
+    else:
+        raise AssertionError("Expected Render database URL validation to fail")
+
+
 def test_settings_use_backend_local_env_file() -> None:
     assert Settings.model_config.get("env_file") == ".env"
 
