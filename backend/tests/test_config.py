@@ -13,6 +13,7 @@ def test_settings_default_to_paper_mode() -> None:
     assert settings.market_region_label == "Europe"
     assert settings.market_status_exchange == "EU"
     assert settings.eodhd_base_url == "https://eodhd.com/api"
+    assert settings.resend_api_base == "https://api.resend.com"
 
 
 def test_postgresql_database_url_is_normalized_to_psycopg_driver() -> None:
@@ -107,6 +108,8 @@ def test_render_blueprint_wires_backend_service_and_database() -> None:
     assert "healthCheckPath: /api/v1/health" in render_text
     assert "property: connectionString" in render_text
     assert "EMAIL_DELIVERY_MODE" in render_text
-    assert "value: log" in render_text
+    assert "value: resend" in render_text
+    assert "RESEND_API_KEY" in render_text
+    assert "EMAIL_FROM_EMAIL" in render_text
     assert "name: alphaview-db" in render_text
     assert "plan: free" in render_text

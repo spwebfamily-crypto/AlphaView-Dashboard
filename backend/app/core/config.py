@@ -23,6 +23,7 @@ class StripeConnectMode(StrEnum):
 
 class EmailDeliveryMode(StrEnum):
     SMTP = "smtp"
+    RESEND = "resend"
     LOG = "log"
 
 
@@ -43,6 +44,8 @@ class Settings(BaseSettings):
     auth_verification_code_ttl_minutes: int = 10
     auth_verification_resend_cooldown_seconds: int = 60
     email_delivery_mode: EmailDeliveryMode = EmailDeliveryMode.SMTP
+    resend_api_key: str | None = None
+    resend_api_base: str = "https://api.resend.com"
     email_smtp_host: str | None = None
     email_smtp_port: int = 587
     email_smtp_username: str | None = None

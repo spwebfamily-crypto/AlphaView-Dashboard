@@ -11,7 +11,7 @@ Este projeto já está preparado para subir o backend FastAPI no Render com Dock
   - `healthCheckPath` em `/api/v1/health`
   - `EXECUTION_MODE=PAPER`
   - `ENABLE_LIVE_TRADING=false`
-  - `EMAIL_DELIVERY_MODE=log` para demos no plano gratuito
+  - `EMAIL_DELIVERY_MODE=resend` para envio real sem depender de SMTP bloqueado no plano gratuito
 - `Dockerfile` na raiz como fallback para o Render quando o serviço Docker é criado fora do fluxo de Blueprint
 - `infra/backend.Dockerfile` atualizado para respeitar a variável `PORT`
 - [backend/.env.render.example](C:/Users/Rodrigo🐐/OneDrive/Desktop/AlphaView-Dashboard/backend/.env.render.example) com os overrides mínimos
@@ -57,25 +57,28 @@ EXECUTION_MODE=PAPER
 ENABLE_LIVE_TRADING=false
 AUTH_COOKIE_SECURE=true
 ALLOW_PUBLIC_REGISTRATION=true
-EMAIL_DELIVERY_MODE=log
+EMAIL_DELIVERY_MODE=resend
+EMAIL_FROM_NAME=AlphaView Dashboard
 PORT=10000
 ```
 
-Estas já ficam definidas pelo `render.yaml`:
+Estas precisam ser definidas no Render:
 
 ```env
 FRONTEND_BASE_URL=https://alphaview.netlify.app
 BACKEND_CORS_ORIGINS=https://alphaview.netlify.app
+RESEND_API_KEY=re_xxxxxxxxx
+EMAIL_FROM_EMAIL=no-reply@yourdomain.com
 ```
 
 Variáveis opcionais que você pode acrescentar depois, se precisar:
 
 ```env
+RESEND_API_BASE=https://api.resend.com
 EMAIL_SMTP_HOST=
 EMAIL_SMTP_PORT=587
 EMAIL_SMTP_USERNAME=
 EMAIL_SMTP_PASSWORD=
-EMAIL_FROM_EMAIL=
 POLYGON_API_KEY=
 EODHD_API_TOKEN=
 STRIPE_PUBLISHABLE_KEY=
@@ -104,13 +107,18 @@ NETLIFY_API_ORIGIN=https://alphaview-backend.onrender.com
 3. Abra o frontend na Netlify
 4. Teste o proxy `/api/v1/health`
 
-Se estiver a usar `EMAIL_DELIVERY_MODE=log`, os códigos de verificação aparecem nos logs do Render em vez de serem enviados por SMTP.
+Para que o envio funcione de verdade:
+
+1. crie uma conta no Resend
+2. verifique o seu domínio de envio
+3. gere um `RESEND_API_KEY`
+4. defina `EMAIL_FROM_EMAIL` com um endereço do domínio verificado
 
 ## Limitações conhecidas
 
 - O plano gratuito do Render faz o web service entrar em idle após inatividade.
 - O Postgres gratuito expira `30 dias` após a criação.
-- O plano gratuito do Render bloqueia SMTP nas portas `25`, `465` e `587`; por isso o Blueprint fica em `EMAIL_DELIVERY_MODE=log` por defeito.
+- O plano gratuito do Render bloqueia SMTP nas portas `25`, `465` e `587`; por isso o Blueprint usa Resend por API HTTP.
 - O arranque da aplicação ainda cria o schema de forma bootstrap-style; não há Alembic neste milestone.
 
 ## Próximo passo recomendado

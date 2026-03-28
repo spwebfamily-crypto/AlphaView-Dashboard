@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+import httpx
 import pytest
 
 from app.core.config import EmailDeliveryMode, Settings
@@ -73,3 +74,66 @@ def test_verification_email_can_be_logged_instead_of_sent(caplog: pytest.LogCapt
 
     assert "email_delivery_logged" in caplog.text
     assert any(getattr(record, "text_body", "").find("135790") >= 0 for record in caplog.records)
+
+
+def test_verification_email_can_be_sent_via_resend(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_post(url: str, *, headers: dict[str, str], json: dict[str, object], timeout: int) -> httpx.Response:
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return httpx.Response(200, json={"id": "email_test_123"})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    settings = Settings(
+        _env_file=None,
+        database_url="sqlite+pysqlite:///:memory:",
+        email_delivery_mode=EmailDeliveryMode.RESEND,
+        resend_api_key="re_test_key",
+        email_from_email="no-reply@example.com",
+        email_from_name="AlphaView Dashboard",
+        frontend_base_url="https://alphaview.example.com",
+    )
+    service = SmtpEmailService(settings)
+    service.send_verification_code(
+        recipient_email="user@example.com",
+        recipient_name="Trader Test",
+        code="246810",
+        ttl_minutes=10,
+    )
+
+    assert captured["url"] == "https://api.resend.com/emails"
+    assert captured["timeout"] == settings.request_timeout_seconds
+    headers = captured["headers"]
+    assert isinstance(headers, dict)
+    assert headers["Authorization"] == "Bearer re_test_key"
+    payload = captured["json"]
+    assert isinstance(payload, dict)
+    assert payload["from"] == "AlphaView Dashboard <no-reply@example.com>"
+    assert payload["to"] == ["user@example.com"]
+    assert payload["subject"] == "AlphaView confirmation code"
+    assert "246810" in str(payload["text"])
+    assert "246810" in str(payload["html"])
+
+
+def test_resend_requires_api_key_and_from_email() -> None:
+    settings = Settings(
+        _env_file=None,
+        database_url="sqlite+pysqlite:///:memory:",
+        email_delivery_mode=EmailDeliveryMode.RESEND,
+        frontend_base_url="https://alphaview.example.com",
+    )
+    service = SmtpEmailService(settings)
+
+    with pytest.raises(Exception) as exc_info:
+        service.send_verification_code(
+            recipient_email="user@example.com",
+            recipient_name="Trader Test",
+            code="246810",
+            ttl_minutes=10,
+        )
+
+    assert "RESEND_API_KEY and EMAIL_FROM_EMAIL" in str(exc_info.value)

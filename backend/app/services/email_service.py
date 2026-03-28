@@ -9,6 +9,8 @@ from pathlib import Path
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
+import httpx
+
 from app.core.config import EmailDeliveryMode, Settings
 
 logger = logging.getLogger(__name__)
@@ -146,6 +148,89 @@ class SmtpEmailService:
                     continue
                 raise EmailDeliveryError("Email delivery failed after retries.", status_code=502) from exc
 
+    def _send_via_resend(
+        self,
+        *,
+        recipient_email: str,
+        subject: str,
+        text_body: str,
+        html_body: str | None = None,
+    ) -> None:
+        if not self.settings.resend_api_key or not self.settings.email_from_email:
+            raise EmailDeliveryError(
+                "Resend delivery is not configured. Set RESEND_API_KEY and EMAIL_FROM_EMAIL first.",
+                status_code=503,
+            )
+
+        payload = {
+            "from": formataddr((self.settings.email_from_name, self.settings.email_from_email)),
+            "to": [recipient_email],
+            "subject": subject,
+            "text": text_body,
+        }
+        if html_body:
+            payload["html"] = html_body
+
+        retries = 3
+        for attempt in range(retries):
+            try:
+                response = httpx.post(
+                    f"{self.settings.resend_api_base.rstrip('/')}/emails",
+                    headers={
+                        "Authorization": f"Bearer {self.settings.resend_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                    timeout=self.settings.request_timeout_seconds,
+                )
+                if response.is_success:
+                    response_payload = response.json()
+                    logger.info(
+                        "email_delivery_sent",
+                        extra={
+                            "provider": "resend",
+                            "recipient_email": recipient_email,
+                            "email_id": response_payload.get("id"),
+                        },
+                    )
+                    return
+
+                error_detail = "Resend email delivery failed."
+                try:
+                    response_payload = response.json()
+                    if isinstance(response_payload, dict):
+                        error_detail = (
+                            response_payload.get("message")
+                            or response_payload.get("error")
+                            or error_detail
+                        )
+                except ValueError:
+                    if response.text:
+                        error_detail = response.text
+
+                logger.warning(
+                    "email_delivery_attempt_failed",
+                    extra={
+                        "provider": "resend",
+                        "attempt": attempt + 1,
+                        "status_code": response.status_code,
+                        "error": error_detail,
+                    },
+                )
+                if response.status_code >= 500 and attempt < retries - 1:
+                    time.sleep(0.35 * (attempt + 1))
+                    continue
+                raise EmailDeliveryError(error_detail, status_code=502)
+            except httpx.RequestError as exc:
+                logger.warning(
+                    "email_delivery_attempt_failed",
+                    extra={"provider": "resend", "attempt": attempt + 1, "error": str(exc)},
+                )
+                if attempt < retries - 1:
+                    time.sleep(0.35 * (attempt + 1))
+                    continue
+                raise EmailDeliveryError("Resend email delivery failed after retries.", status_code=502) from exc
+
     def _build_verification_email_bodies(
         self,
         *,
@@ -278,6 +363,15 @@ class SmtpEmailService:
             code=code,
             ttl_minutes=ttl_minutes,
         )
+        if self.settings.email_delivery_mode == EmailDeliveryMode.RESEND:
+            self._send_via_resend(
+                recipient_email=recipient_email,
+                subject="AlphaView confirmation code",
+                text_body=text_body,
+                html_body=html_body,
+            )
+            return
+
         self.send_email(
             recipient_email=recipient_email,
             subject="AlphaView confirmation code",

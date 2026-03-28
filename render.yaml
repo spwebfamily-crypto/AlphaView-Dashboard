@@ -39,7 +39,13 @@ services:
       - key: AUTH_COOKIE_SECURE
         value: "true"
       - key: EMAIL_DELIVERY_MODE
-        value: log
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM_EMAIL
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: AlphaView Dashboard
       - key: FRONTEND_BASE_URL
         value: https://alphaview.netlify.app
       - key: BACKEND_CORS_ORIGINS
