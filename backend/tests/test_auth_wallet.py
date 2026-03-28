@@ -3,10 +3,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-import app.services.auth_service as auth_service
 from app.core.config import StripeConnectMode
 from app.models.user import User
-from app.services.email_service import SmtpEmailService
 from app.services.stripe_service import StripeConnectService, StripeServiceError
 
 
@@ -15,14 +13,10 @@ def test_protected_routes_require_authentication(client) -> None:
     assert response.status_code == 401
 
 
-def test_register_requires_email_verification_before_login(
+def test_register_creates_verified_session_and_allows_direct_login(
     client,
     db_session: Session,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(auth_service, "generate_verification_code", lambda: "123456")
-    monkeypatch.setattr(SmtpEmailService, "send_verification_code", lambda self, **kwargs: None)
-
     register_response = client.post(
         "/api/v1/auth/register",
         json={
@@ -32,42 +26,26 @@ def test_register_requires_email_verification_before_login(
         },
     )
     assert register_response.status_code == 201
-    assert register_response.json()["email"] == "pending@example.com"
+    assert register_response.json()["user"]["email"] == "pending@example.com"
 
     user = db_session.scalar(select(User).where(User.email == "pending@example.com"))
     assert user is not None
-    assert user.email_verified_at is None
-    assert user.email_verification_code_hash is not None
+    assert user.email_verified_at is not None
+    assert user.email_verification_code_hash is None
 
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": "pending@example.com", "password": "Password123!"},
     )
-    assert login_response.status_code == 403
-    assert login_response.json()["detail"] == "Verify your email before signing in."
-
-    verify_response = client.post(
-        "/api/v1/auth/verify-email",
-        json={"email": "pending@example.com", "code": "123456"},
-    )
-    assert verify_response.status_code == 200
-    assert verify_response.json()["user"]["email"] == "pending@example.com"
+    assert login_response.status_code == 200
+    assert login_response.json()["user"]["email"] == "pending@example.com"
 
     db_session.refresh(user)
     assert user.email_verified_at is not None
     assert user.email_verification_code_hash is None
 
 
-def test_resend_verification_code_works_for_unverified_user(client, monkeypatch) -> None:
-    sent_codes: list[str] = []
-
-    monkeypatch.setattr(auth_service, "generate_verification_code", lambda: "654321")
-    monkeypatch.setattr(
-        SmtpEmailService,
-        "send_verification_code",
-        lambda self, **kwargs: sent_codes.append(str(kwargs["code"])),
-    )
-
+def test_verification_endpoints_are_disabled(client) -> None:
     register_response = client.post(
         "/api/v1/auth/register",
         json={
@@ -77,16 +55,19 @@ def test_resend_verification_code_works_for_unverified_user(client, monkeypatch)
         },
     )
     assert register_response.status_code == 201
-    assert sent_codes == ["654321"]
-
-    client.app.state.settings.auth_verification_resend_cooldown_seconds = 0
     resend_response = client.post(
         "/api/v1/auth/resend-verification",
         json={"email": "resend@example.com"},
     )
-    assert resend_response.status_code == 200
-    assert resend_response.json()["email"] == "resend@example.com"
-    assert sent_codes == ["654321", "654321"]
+    assert resend_response.status_code == 409
+    assert resend_response.json()["detail"] == "Email verification is disabled for this deployment."
+
+    verify_response = client.post(
+        "/api/v1/auth/verify-email",
+        json={"email": "resend@example.com", "code": "123456"},
+    )
+    assert verify_response.status_code == 409
+    assert verify_response.json()["detail"] == "Email verification is disabled for this deployment. Sign in directly instead."
 
 
 def test_auth_session_can_refresh_and_logout(authenticated_client) -> None:

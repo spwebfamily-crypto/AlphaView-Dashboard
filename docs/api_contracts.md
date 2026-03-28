@@ -9,11 +9,11 @@
 
 - `POST /api/v1/auth/register`
 - Inputs: `email`, `password`, optional `full_name`
-- Creates a real user record in the database, validates password strength, issues a confirmation code, and sends a branded HTML email over the configured SMTP/Gmail-compatible mailbox
+- Creates a real user record in the database, validates password strength, opens a revocable session immediately, and sets `HttpOnly` cookies
 
 - `POST /api/v1/auth/login`
 - Inputs: `email`, `password`
-- Authenticates the dashboard user only after the email address has been confirmed
+- Authenticates the dashboard user directly without an email verification step
 
 - `POST /api/v1/auth/refresh`
 - Rotates the refresh session and renews the access cookie without exposing tokens to the frontend runtime
@@ -23,11 +23,11 @@
 
 - `POST /api/v1/auth/verify-email`
 - Inputs: `email`, `code`
-- Confirms the email verification code, marks the user as verified, creates a revocable session, and sets `HttpOnly` cookies
+- Deprecated in the current deployment flow because email verification is disabled
 
 - `POST /api/v1/auth/resend-verification`
 - Inputs: `email`
-- Reissues a fresh confirmation code for an existing unverified account and sends it again via the branded SMTP email flow
+- Deprecated in the current deployment flow because email verification is disabled
 
 - `GET /api/v1/auth/me`
 - Returns the current authenticated user profile used by the dashboard shell

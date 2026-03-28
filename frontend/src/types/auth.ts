@@ -18,9 +18,3 @@ export type AuthSession = {
   access_token_expires_in_seconds: number;
   refresh_token_expires_in_seconds: number;
 };
-
-export type AuthRegistrationChallenge = {
-  message: string;
-  email: string;
-  verification_expires_in_seconds: number;
-};

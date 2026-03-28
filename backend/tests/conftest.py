@@ -4,10 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-import app.services.auth_service as auth_service
 from app.core.config import ExecutionMode, Settings
 from app.main import create_app
-from app.services.email_service import SmtpEmailService
 
 
 @pytest.fixture
@@ -46,9 +44,7 @@ def db_session(client: TestClient) -> Session:
 
 @pytest.fixture
 def authenticated_client(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setattr(auth_service, "generate_verification_code", lambda: "123456")
-    monkeypatch.setattr(SmtpEmailService, "send_verification_code", lambda self, **kwargs: None)
-
+    _ = monkeypatch
     register_response = client.post(
         "/api/v1/auth/register",
         json={
@@ -58,10 +54,4 @@ def authenticated_client(client: TestClient, monkeypatch: pytest.MonkeyPatch) ->
         },
     )
     assert register_response.status_code == 201
-
-    verify_response = client.post(
-        "/api/v1/auth/verify-email",
-        json={"email": "trader@example.com", "code": "123456"},
-    )
-    assert verify_response.status_code == 200
     return client

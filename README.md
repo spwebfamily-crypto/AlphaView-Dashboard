@@ -42,7 +42,7 @@
 - ✅ Backtester com custos, slippage, cooldown, max daily loss e métricas detalhadas
 - ✅ Simulador de execução local com tracking de ordens, execuções e posições
 - ✅ Demo seed flow completo para ambiente de demonstração
-- ✅ Email de confirmação HTML com branding AlphaView via SMTP
+- ✅ Infraestrutura de email transacional HTML com branding AlphaView
 
 ### 🖥️ Dashboard Profissional
 - ✅ Interface React multi-página: Overview, Signals, Positions, Trades, Backtests, Models, Logs, Settings
@@ -146,6 +146,7 @@ docker compose up --build
 
 - O frontend agora exige autenticação antes de carregar o dashboard.
 - O backend cria utilizadores reais em base de dados e usa cookies `HttpOnly` com sessões revogáveis.
+- Novas contas entram diretamente no dashboard após o registo; a verificação de email está desativada neste momento.
 - O menu **Account** concentra onboarding Stripe Connect, sincronização de estado e pedidos de saque.
 - `WITHDRAWALS_ENABLED=false` continua a ser o default. Ative explicitamente para testar saques.
 - O saldo sacável é um ledger dedicado; PnL simulado de PAPER trading não vira dinheiro real automaticamente.
@@ -181,12 +182,11 @@ FRONTEND_BASE_URL=http://localhost:5173
 2. Preencha `backend/.env` com as variáveis de auth, SMTP Gmail-compatible, Stripe, `EODHD_API_TOKEN` para universe/quotes europeus e `IBKR_HOST` se quiser candles intraday europeus no dashboard.
 3. Suba a stack com `docker compose up --build`.
 4. Crie a primeira conta no ecrã de login do frontend.
-5. Confirme o código de 6 dígitos enviado para o email antes de tentar entrar no dashboard.
-6. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
-7. Entre em **Billing** para abrir o Stripe Checkout ou o Billing Portal.
-8. `STRIPE_CONNECT_MODE=auto` tenta `Accounts v2` primeiro e recua para `v1/accounts` quando a plataforma Stripe ainda nÃ£o tem `Accounts v2` ativo.
-9. Configure os URLs de `STRIPE_CHECKOUT_*` e o `STRIPE_WEBHOOK_SECRET` antes de expor o fluxo de billing.
-10. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
+5. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
+6. Entre em **Billing** para abrir o Stripe Checkout ou o Billing Portal.
+7. `STRIPE_CONNECT_MODE=auto` tenta `Accounts v2` primeiro e recua para `v1/accounts` quando a plataforma Stripe ainda nÃ£o tem `Accounts v2` ativo.
+8. Configure os URLs de `STRIPE_CHECKOUT_*` e o `STRIPE_WEBHOOK_SECRET` antes de expor o fluxo de billing.
+9. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
 
 ---
 
@@ -281,9 +281,7 @@ python -m app.workers.retrain_worker `
 
 | Método | Endpoint | Descrição |
 |--------|----------|-------------|
-| `POST` | `/api/v1/auth/register` | Criar conta do dashboard |
-| `POST` | `/api/v1/auth/verify-email` | Confirmar código de email e abrir sessão |
-| `POST` | `/api/v1/auth/resend-verification` | Reenviar código de confirmação |
+| `POST` | `/api/v1/auth/register` | Criar conta do dashboard e abrir sessão imediatamente |
 | `POST` | `/api/v1/auth/login` | Autenticar utilizador |
 | `GET` | `/api/v1/auth/me` | Obter utilizador autenticado |
 | `POST` | `/api/v1/market-data/backfill` | Backfill de dados históricos |
@@ -345,7 +343,7 @@ python -m app.workers.retrain_worker `
 - 📉 Backtesting é intencionalmente simples e research-oriented, não é simulação de portfólio execution-grade
 - 🤖 Reinforcement learning permanece fora do escopo do baseline vendável
 - 💳 Billing Stripe já está ligado ao dashboard, mas ainda depende de `price_id` manual e não tem catálogo interno de planos
-- ✉️ O envio do código de confirmação depende de SMTP compatível com Gmail configurado com credenciais válidas
+- ✉️ A entrega de emails transacionais depende do provider configurado e de credenciais válidas
 - 🌍 O universo e as cotações europeias agora dependem de `EODHD_API_TOKEN`; candles intraday europeus continuam a depender de `IBKR_HOST` e do IBKR Gateway/TWS
 - 📉 O token EODHD atual não tem entitlement intraday; `1min/5min/15min` na Europa continuam a degradar para IBKR ou preview sintético
 

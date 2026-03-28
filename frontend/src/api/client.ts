@@ -1,4 +1,4 @@
-import type { AuthRegistrationChallenge, AuthSession, AuthUser } from "../types/auth";
+import type { AuthSession, AuthUser } from "../types/auth";
 import type { BillingPortalSessionPayload, BillingSummary, CheckoutSessionPayload } from "../types/billing";
 import type { BrokerStatus, Execution, Order } from "../types/broker";
 import type { DashboardSnapshot } from "../types/dashboard";
@@ -93,8 +93,8 @@ export async function registerAccount(payload: {
   email: string;
   password: string;
   full_name?: string;
-}): Promise<AuthRegistrationChallenge> {
-  return apiFetch<AuthRegistrationChallenge>(
+}): Promise<AuthSession> {
+  return apiFetch<AuthSession>(
     "/auth/register",
     {
       method: "POST",
@@ -107,28 +107,6 @@ export async function registerAccount(payload: {
 export async function loginAccount(payload: { email: string; password: string }): Promise<AuthSession> {
   return apiFetch<AuthSession>(
     "/auth/login",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    { retryOnAuth: false },
-  );
-}
-
-export async function verifyEmailCode(payload: { email: string; code: string }): Promise<AuthSession> {
-  return apiFetch<AuthSession>(
-    "/auth/verify-email",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    { retryOnAuth: false },
-  );
-}
-
-export async function resendVerificationCode(payload: { email: string }): Promise<AuthRegistrationChallenge> {
-  return apiFetch<AuthRegistrationChallenge>(
-    "/auth/resend-verification",
     {
       method: "POST",
       body: JSON.stringify(payload),

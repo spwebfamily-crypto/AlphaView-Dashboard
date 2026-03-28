@@ -71,7 +71,7 @@ const pageCopy: Record<PageKey, { eyebrow: string; title: string; description: s
   account: {
     eyebrow: "Identity layer",
     title: "Account, payouts, and access",
-    description: "Manage verification, Stripe readiness, and withdrawal controls without mixing paper and real cash.",
+    description: "Manage access, Stripe readiness, and withdrawal controls without mixing paper and real cash.",
   },
   billing: {
     eyebrow: "Revenue controls",

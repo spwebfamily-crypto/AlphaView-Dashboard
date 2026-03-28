@@ -140,7 +140,7 @@ export function Account({ user }: AccountProps) {
   const pendingWithdrawals = withdrawals.filter((item) => /pending|queued|processing/i.test(item.status)).length;
   const latestWithdrawal = [...withdrawals].sort((left, right) => right.created_at.localeCompare(left.created_at))[0] ?? null;
   const stripeStatusTone = getStripeTone(summary.stripe);
-  const identityTone = user.email_verified_at ? "positive" : "warning";
+  const identityTone = "positive";
 
   return (
     <div className="dashboard-page">
@@ -156,9 +156,9 @@ export function Account({ user }: AccountProps) {
             tone: user.is_active ? "positive" : "negative",
           },
           {
-            label: "Email status",
-            value: user.email_verified_at ? "Verified" : "Pending",
-            note: user.email_verified_at ? formatDateTime(user.email_verified_at) : "Verification still required",
+            label: "Account status",
+            value: "Ready",
+            note: user.email_verified_at ? `Activated ${formatDateTime(user.email_verified_at)}` : "Direct sign-in enabled",
             tone: identityTone,
           },
           {
@@ -186,7 +186,7 @@ export function Account({ user }: AccountProps) {
           <p>The authenticated session controls payout access, Stripe onboarding actions, and withdrawal requests.</p>
           <div className="detail-card-meta">
             <span>{user.email}</span>
-            <span>{user.email_verified_at ? "Email verified" : "Email verification pending"}</span>
+            <span>Direct sign-in enabled</span>
           </div>
         </article>
 
@@ -261,9 +261,9 @@ export function Account({ user }: AccountProps) {
               </strong>
             </div>
             <div className="setting-row">
-              <span>Email verification</span>
+              <span>Access policy</span>
               <strong>
-                <span className={`tone-pill tone-${identityTone}`}>{user.email_verified_at ? "Verified" : "Pending"}</span>
+                <span className={`tone-pill tone-${identityTone}`}>Direct sign-in</span>
               </strong>
             </div>
             <div className="setting-row">

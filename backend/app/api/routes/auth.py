@@ -24,13 +24,11 @@ from app.services.auth_service import (
     authenticate_user,
     create_user_session,
     get_unverified_user_by_email,
-    issue_email_verification_code,
     register_user,
     revoke_session_by_refresh_token,
     rotate_user_session,
     verify_email_code,
 )
-from app.services.email_service import EmailDeliveryError, SmtpEmailService
 
 router = APIRouter(prefix="/auth")
 
@@ -69,21 +67,14 @@ def _serialize_auth_response(bundle: AuthSessionBundle, settings: Settings) -> A
     )
 
 
-def _serialize_register_response(user: User, settings: Settings) -> RegisterResponse:
-    return RegisterResponse(
-        message=f"A confirmation code was sent to {user.email}.",
-        email=user.email,
-        verification_expires_in_seconds=settings.auth_verification_code_ttl_minutes * 60,
-    )
-
-
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
 def register(
     payload: RegisterRequest,
+    request: Request,
+    response: Response,
     db_session: Session = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
-) -> RegisterResponse:
-    user: User | None = None
+) -> AuthSessionResponse:
     try:
         user = register_user(
             db_session,
@@ -92,22 +83,18 @@ def register(
             password=payload.password,
             full_name=payload.full_name,
         )
-        challenge = issue_email_verification_code(db_session, settings, user=user)
-        SmtpEmailService(settings).send_verification_code(
-            recipient_email=user.email,
-            recipient_name=user.full_name,
-            code=challenge.code,
-            ttl_minutes=settings.auth_verification_code_ttl_minutes,
+        bundle = create_user_session(
+            db_session,
+            settings,
+            user=user,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
         )
     except AuthServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except EmailDeliveryError as exc:
-        if user is not None:
-            user.email_verification_sent_at = None
-            db_session.commit()
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
-    return _serialize_register_response(user, settings)
+    _set_auth_cookies(response, settings, bundle)
+    return _serialize_auth_response(bundle, settings)
 
 
 @router.post("/verify-email", response_model=AuthSessionResponse)
@@ -140,25 +127,12 @@ def resend_verification(
     db_session: Session = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
 ) -> RegisterResponse:
-    user: User | None = None
     try:
-        user = get_unverified_user_by_email(db_session, payload.email)
-        challenge = issue_email_verification_code(db_session, settings, user=user)
-        SmtpEmailService(settings).send_verification_code(
-            recipient_email=user.email,
-            recipient_name=user.full_name,
-            code=challenge.code,
-            ttl_minutes=settings.auth_verification_code_ttl_minutes,
-        )
+        get_unverified_user_by_email(db_session, payload.email)
     except AuthServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except EmailDeliveryError as exc:
-        if user is not None:
-            user.email_verification_sent_at = None
-            db_session.commit()
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
-    return _serialize_register_response(user, settings)
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email verification is disabled for this deployment.")
 
 
 @router.post("/login", response_model=AuthSessionResponse)
