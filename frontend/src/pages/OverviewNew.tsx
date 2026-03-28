@@ -87,16 +87,34 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
     const backtests = snapshot.backtests ?? [];
     const bestBacktest = backtests.sort((a, b) => b.sharpe - a.sharpe)[0];
 
+    // Calculate win rate from equity curve
+    const positiveReturns = equity.filter((p, i) => {
+      const prev = equity[i - 1];
+      return i > 0 && p.equity && prev?.equity && p.equity > prev.equity;
+    }).length;
+    const totalPeriods = Math.max(equity.length - 1, 1);
+    const winRate = positiveReturns / totalPeriods;
+
+    // Calculate max drawdown from equity curve
+    let maxDrawdown = 0;
+    let peak = equity[0]?.equity ?? 100000;
+    equity.forEach((point) => {
+      const value = point.equity ?? 100000;
+      if (value > peak) peak = value;
+      const drawdown = (value - peak) / peak;
+      if (drawdown < maxDrawdown) maxDrawdown = drawdown;
+    });
+
     return {
       totalPnL,
       dailyPnL: totalPnL * 0.02, // Simplified daily estimate
-      winRate: bestBacktest?.win_rate ?? 0,
+      winRate,
       activePositions: snapshot.positions?.length ?? 0,
       activeSignals: signals.length,
       buySignals,
       sellSignals,
       holdSignals,
-      maxDrawdown: bestBacktest?.max_drawdown ?? 0,
+      maxDrawdown,
       sharpeRatio: bestBacktest?.sharpe ?? 0,
       totalTrades: bestBacktest?.trade_count ?? 0,
     };
@@ -115,8 +133,8 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
   }, [snapshot?.latest_signals]);
 
   const systemStatus = useMemo(() => {
-    const mode = runtime?.mode ?? "DEMO";
-    const brokerConnected = runtime?.broker_connected ?? false;
+    const mode = snapshot?.mode ?? runtime?.execution_mode ?? "DEMO";
+    const brokerConnected = runtime?.broker_adapter !== "mock";
     const dataFresh = snapshot?.generated_at
       ? Date.now() - new Date(snapshot.generated_at).getTime() < 300000
       : false;
