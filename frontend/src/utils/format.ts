@@ -1,10 +1,16 @@
-export function formatCurrency(value: number | null | undefined) {
+function normalizeCurrency(currency: string | null | undefined) {
+  return (currency ?? "USD").toUpperCase();
+}
+
+export function formatCurrency(value: number | null | undefined, currency?: string | null) {
   if (value == null || Number.isNaN(value)) {
     return "-";
   }
-  return new Intl.NumberFormat("en-US", {
+  const normalizedCurrency = normalizeCurrency(currency);
+  const locale = normalizedCurrency === "EUR" ? "pt-PT" : "en-US";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency: normalizedCurrency,
     maximumFractionDigits: 2,
   }).format(value);
 }
@@ -22,4 +28,3 @@ export function formatDateTime(value: string | null | undefined) {
   }
   return value.replace("T", " ").slice(0, 16);
 }
-

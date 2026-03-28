@@ -23,7 +23,7 @@ class BackfillRequest(BaseModel):
     timeframe: str = "1min"
     start: datetime
     end: datetime
-    source: str = Field(default="auto", description="auto, polygon, finnhub, or synthetic")
+    source: str = Field(default="auto", description="auto, eodhd, ibkr, polygon, finnhub, or synthetic")
 
 
 class BackfillResponse(BaseModel):
@@ -50,3 +50,30 @@ class MarketStatusResponse(BaseModel):
     timezone: str
     timestamp: datetime
     provider: str
+
+
+class SymbolLookupResponse(BaseModel):
+    ticker: str
+    name: str | None = None
+    exchange: str | None = None
+    asset_type: str
+    is_active: bool
+    market: str | None = None
+    primary_exchange: str | None = None
+    security_type: str | None = None
+    currency: str | None = None
+    round_lot_size: int | None = None
+    minimum_order_size: int | None = None
+    last_updated_utc: datetime | None = None
+    last_price: float | None = None
+    change: float | None = None
+    change_percent: float | None = None
+    quote_timestamp: datetime | None = None
+    quote_source: str | None = None
+
+
+class MarketUniverseResponse(BaseModel):
+    items: list[SymbolLookupResponse]
+    next_cursor: str | None = None
+    source: str
+    as_of: datetime

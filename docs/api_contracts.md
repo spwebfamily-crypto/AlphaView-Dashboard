@@ -9,7 +9,7 @@
 
 - `POST /api/v1/auth/register`
 - Inputs: `email`, `password`, optional `full_name`
-- Creates a real user record in the database, validates password strength, issues a confirmation code, and sends it over the configured SMTP/Gmail-compatible mailbox
+- Creates a real user record in the database, validates password strength, issues a confirmation code, and sends a branded HTML email over the configured SMTP/Gmail-compatible mailbox
 
 - `POST /api/v1/auth/login`
 - Inputs: `email`, `password`
@@ -27,7 +27,7 @@
 
 - `POST /api/v1/auth/resend-verification`
 - Inputs: `email`
-- Reissues a fresh confirmation code for an existing unverified account and sends it again via SMTP
+- Reissues a fresh confirmation code for an existing unverified account and sends it again via the branded SMTP email flow
 
 - `GET /api/v1/auth/me`
 - Returns the current authenticated user profile used by the dashboard shell
@@ -36,11 +36,22 @@
 
 - `POST /api/v1/market-data/backfill`
 - Inputs: `symbol`, `timeframe`, `start`, `end`, `source`
-- Outputs: inserted row count and selected source (`polygon`, `finnhub`, or `synthetic`)
+- Outputs: inserted row count and selected source (`eodhd`, `ibkr`, `polygon`, `finnhub`, or `synthetic`)
 
 - `GET /api/v1/market-data/bars`
-- Query: `symbol`, `timeframe`, optional `start`, `end`, `limit`
+- Query: `symbol`, `timeframe`, optional `start`, `end`, `limit`, `refresh`
 - Returns normalized OHLCV rows
+- In the Europe-oriented dashboard flow, `timeframe=1day` can sync daily bars from EODHD
+- For `1min/5min/15min`, `refresh=true` still pulls recent candles from IBKR when the Gateway/TWS is reachable; otherwise the route falls back to stored bars or preview
+
+- `GET /api/v1/market-data/symbols`
+- Query: optional `exchange`, `query`, `active_only`, `limit`
+- Returns the tracked equity universe used to browse markets and load the candlestick chart
+
+- `GET /api/v1/market-data/universe`
+- Query: optional `locale`, `query`, `exchange`, `active_only`, `limit`, `cursor`, `security_type`, `currency`, `include_quotes`
+- Returns the Europe-oriented exchange universe through EODHD search and exchange-symbol-list endpoints, enriched with EODHD real-time/delayed quotes when available
+- The route no longer depends on Polygon for the dashboard market browser; Europe universe/quotes require `EODHD_API_TOKEN`, while intraday candles still require `IBKR_HOST` plus a running IBKR Gateway/TWS session
 
 - `GET /api/v1/market-data/market-status`
 - Query: `exchange`
@@ -138,6 +149,7 @@
 
 - `POST /api/v1/wallet/stripe/onboarding-link`
 - Creates or resumes a Stripe Connect recipient account and returns a hosted onboarding URL
+- Supports `Accounts v2` and can fall back to legacy `v1/accounts` onboarding when the platform does not have `Accounts v2` enabled
 
 - `POST /api/v1/wallet/stripe/refresh`
 - Pulls the latest Stripe Connect account status into the local database

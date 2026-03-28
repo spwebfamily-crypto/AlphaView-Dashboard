@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 
 class DemoSeedRequest(BaseModel):
-    symbols: list[str] = ["AAPL", "MSFT", "NVDA"]
+    symbols: list[str] = ["SAP.DE", "MC.PA", "AIR.PA"]
     timeframe: str = "1min"
     days: int = 5
 

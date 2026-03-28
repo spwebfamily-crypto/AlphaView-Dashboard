@@ -13,6 +13,7 @@ from app.services.email_service import SmtpEmailService
 @pytest.fixture
 def test_settings(tmp_path) -> Settings:
     return Settings(
+        _env_file=None,
         project_name="AlphaView Test",
         app_version="test",
         app_env="test",

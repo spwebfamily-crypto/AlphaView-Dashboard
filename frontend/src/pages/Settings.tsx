@@ -17,13 +17,15 @@ type SettingsProps = {
 export function Settings({ runtime, brokerStatus, onSeedDemo, seeding }: SettingsProps) {
   const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null);
   const [marketStatusError, setMarketStatusError] = useState<string | null>(null);
+  const marketRegionLabel = runtime?.market_region_label ?? "Europe";
+  const marketStatusExchange = runtime?.market_status_exchange ?? "EU";
 
   useEffect(() => {
     let active = true;
 
     async function loadMarketStatus() {
       try {
-        const payload = await fetchMarketStatus("US");
+        const payload = await fetchMarketStatus(marketStatusExchange);
         if (active) {
           setMarketStatus(payload);
           setMarketStatusError(null);
@@ -31,7 +33,11 @@ export function Settings({ runtime, brokerStatus, onSeedDemo, seeding }: Setting
       } catch (caughtError) {
         if (active) {
           setMarketStatus(null);
-          setMarketStatusError(caughtError instanceof Error ? caughtError.message : "Market status unavailable.");
+          if (marketStatusExchange === "EU") {
+            setMarketStatusError("Europe market status is not available with the current Finnhub key.");
+          } else {
+            setMarketStatusError(caughtError instanceof Error ? caughtError.message : "Market status unavailable.");
+          }
         }
       }
     }
@@ -41,7 +47,7 @@ export function Settings({ runtime, brokerStatus, onSeedDemo, seeding }: Setting
     return () => {
       active = false;
     };
-  }, []);
+  }, [marketStatusExchange]);
 
   return (
     <div className="dashboard-page">
@@ -73,6 +79,10 @@ export function Settings({ runtime, brokerStatus, onSeedDemo, seeding }: Setting
             <div className="setting-row">
               <span>Timeframe</span>
               <strong>{runtime?.default_timeframe ?? "-"}</strong>
+            </div>
+            <div className="setting-row">
+              <span>Market Region</span>
+              <strong>{marketRegionLabel}</strong>
             </div>
             <div className="setting-row">
               <span>Available Data Sources</span>
@@ -111,14 +121,14 @@ export function Settings({ runtime, brokerStatus, onSeedDemo, seeding }: Setting
         <section className="panel page-panel">
           <div className="panel-header">
             <div>
-              <h3>US market status</h3>
-              <p>Live exchange state from Finnhub so you can verify if the market is open, closed, or pre-market.</p>
+              <h3>{marketRegionLabel} market status</h3>
+              <p>Live exchange state from Finnhub for the dashboard default market region.</p>
             </div>
           </div>
           <div className="stack">
             <div className="setting-row">
               <span>Exchange</span>
-              <strong>{marketStatus?.exchange ?? "US"}</strong>
+              <strong>{marketStatus?.exchange ?? marketStatusExchange}</strong>
             </div>
             <div className="setting-row">
               <span>Session</span>

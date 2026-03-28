@@ -25,16 +25,26 @@ class WalletServiceError(RuntimeError):
 
 
 def _extract_requirements_status(account: dict) -> str | None:
-    return (
-        account.get("requirements", {})
-        .get("summary", {})
-        .get("minimum_deadline", {})
-        .get("status")
-    )
+    requirements = account.get("requirements", {})
+    v2_status = requirements.get("summary", {}).get("minimum_deadline", {}).get("status")
+    if v2_status:
+        return v2_status
+
+    if requirements.get("currently_due"):
+        return "currently_due"
+    if requirements.get("past_due"):
+        return "past_due"
+    if requirements.get("disabled_reason"):
+        return str(requirements["disabled_reason"])
+    if requirements.get("eventually_due"):
+        return "eventually_due"
+    if "requirements" in account:
+        return "complete"
+    return None
 
 
 def _extract_capability_status(account: dict) -> str | None:
-    return (
+    v2_status = (
         account.get("configuration", {})
         .get("recipient", {})
         .get("capabilities", {})
@@ -42,6 +52,27 @@ def _extract_capability_status(account: dict) -> str | None:
         .get("stripe_transfers", {})
         .get("status")
     )
+    if v2_status:
+        return v2_status
+
+    transfers_capability = account.get("capabilities", {}).get("transfers")
+    if isinstance(transfers_capability, str):
+        return transfers_capability
+
+    if account.get("payouts_enabled"):
+        return "active"
+    return None
+
+
+def _is_onboarding_complete(account: dict, requirements_status: str | None) -> bool:
+    requirements = account.get("requirements", {})
+    if requirements.get("summary", {}).get("minimum_deadline", {}).get("status") is not None:
+        return requirements_status not in {"currently_due", "past_due"}
+
+    disabled_reason = requirements.get("disabled_reason")
+    if disabled_reason and disabled_reason != "requirements.pending_verification":
+        return False
+    return requirements_status not in {"currently_due", "past_due"}
 
 
 def build_stripe_status(user: User, account: dict | None = None) -> StripeConnectStatus:
@@ -51,7 +82,7 @@ def build_stripe_status(user: User, account: dict | None = None) -> StripeConnec
     transfers_enabled = user.stripe_transfers_enabled
 
     if account is not None:
-        onboarding_complete = requirements_status not in {"currently_due", "past_due"}
+        onboarding_complete = _is_onboarding_complete(account, requirements_status)
         transfers_enabled = capability_status == "active"
 
     return StripeConnectStatus(

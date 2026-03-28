@@ -14,6 +14,12 @@ class ExecutionMode(StrEnum):
     LIVE = "LIVE"
 
 
+class StripeConnectMode(StrEnum):
+    AUTO = "auto"
+    V1 = "v1"
+    V2 = "v2"
+
+
 class Settings(BaseSettings):
     project_name: str = "AlphaView Dashboard"
     app_version: str = "0.1.0"
@@ -44,13 +50,17 @@ class Settings(BaseSettings):
     finnhub_api_key: str | None = None
     finnhub_secret_key: str | None = None
     finnhub_base_url: str = "https://finnhub.io/api/v1"
+    eodhd_api_token: str | None = None
+    eodhd_base_url: str = "https://eodhd.com/api"
     ibkr_host: str | None = None
     ibkr_port: int = 7497
     sentiment_api_url: str = "https://api.alternative.me/fng/"
     ibkr_client_id: int = 101
     broker_adapter: str = "mock"
-    default_symbols: list[str] = Field(default_factory=lambda: ["AAPL", "MSFT", "NVDA"])
+    default_symbols: list[str] = Field(default_factory=lambda: ["SAP.DE", "MC.PA", "AIR.PA"])
     default_timeframe: str = "1min"
+    market_region_label: str = "Europe"
+    market_status_exchange: str = "EU"
     artifact_root: str = "../reports"
     model_registry_dir: str = "../reports/model_runs"
     backtest_report_dir: str = "../reports/backtests"
@@ -62,6 +72,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str | None = None
     stripe_api_base: str = "https://api.stripe.com"
     stripe_api_version: str = "2026-02-25.clover"
+    stripe_connect_mode: StripeConnectMode = StripeConnectMode.AUTO
     stripe_connect_api_version: str = "2026-01-28.clover"
     stripe_account_links_api_version: str = "2025-08-27.preview"
     stripe_connect_return_url: str | None = None
@@ -106,6 +117,16 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_currency(cls, value: str) -> str:
         return value.lower()
+
+    @field_validator("market_region_label", mode="before")
+    @classmethod
+    def normalize_market_region_label(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) and value.strip() else "Europe"
+
+    @field_validator("market_status_exchange")
+    @classmethod
+    def normalize_market_status_exchange(cls, value: str) -> str:
+        return value.upper()
 
     @property
     def artifact_root_path(self) -> Path:

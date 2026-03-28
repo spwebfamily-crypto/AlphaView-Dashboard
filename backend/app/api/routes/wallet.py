@@ -24,6 +24,14 @@ from app.services.wallet_service import (
 router = APIRouter(prefix="/wallet")
 
 
+def _format_wallet_error_detail(exc: Exception) -> str:
+    detail = getattr(exc, "message", str(exc))
+    normalized_detail = detail.casefold()
+    if "signed up for connect" in normalized_detail:
+        return "Stripe Connect ainda nao esta ativado nesta conta. Ative em https://dashboard.stripe.com/connect e tente novamente."
+    return detail
+
+
 @router.get("/summary", response_model=WalletSummaryResponse)
 def get_wallet_summary(
     db_session: Session = Depends(get_db_session),
@@ -78,8 +86,10 @@ def create_onboarding_link(
 
         link = stripe_service.create_onboarding_link(current_user.stripe_connected_account_id)
     except Exception as exc:
-        detail = getattr(exc, "message", str(exc))
-        raise HTTPException(status_code=getattr(exc, "status_code", 502), detail=detail) from exc
+        raise HTTPException(
+            status_code=getattr(exc, "status_code", 502),
+            detail=_format_wallet_error_detail(exc),
+        ) from exc
 
     return StripeLinkResponse(url=link["url"])
 
@@ -97,8 +107,10 @@ def refresh_stripe_status(
         account = StripeConnectService(settings).retrieve_connected_account(current_user.stripe_connected_account_id)
         stripe_status = sync_user_stripe_status(db_session, current_user, account)
     except Exception as exc:
-        detail = getattr(exc, "message", str(exc))
-        raise HTTPException(status_code=getattr(exc, "status_code", 502), detail=detail) from exc
+        raise HTTPException(
+            status_code=getattr(exc, "status_code", 502),
+            detail=_format_wallet_error_detail(exc),
+        ) from exc
 
     return WalletSummaryResponse(
         withdrawable_balance_cents=current_user.withdrawable_balance_cents,
@@ -119,8 +131,10 @@ def create_dashboard_link(
     try:
         link = StripeConnectService(settings).create_dashboard_link(current_user.stripe_connected_account_id)
     except Exception as exc:
-        detail = getattr(exc, "message", str(exc))
-        raise HTTPException(status_code=getattr(exc, "status_code", 502), detail=detail) from exc
+        raise HTTPException(
+            status_code=getattr(exc, "status_code", 502),
+            detail=_format_wallet_error_detail(exc),
+        ) from exc
 
     return StripeLinkResponse(url=link["url"])
 

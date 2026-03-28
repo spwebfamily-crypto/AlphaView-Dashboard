@@ -40,7 +40,7 @@ export function Sidebar({ activePage, onSelect }: SidebarProps) {
       </div>
 
       <p className="sidebar-copy">
-        Notus-style control surface for market research, signals, and simulation on top of real US equity data.
+        Notus-style control surface for market research, signals, and simulation oriented to European equities.
       </p>
 
       <nav className="sidebar-nav" aria-label="Primary">

@@ -15,11 +15,12 @@ AlphaView Dashboard is a modular equities research and simulation platform with:
 
 ## How to run
 
-1. Copy `.env.example` to `.env`.
-2. Start the stack with `docker compose up --build`.
-3. Open the frontend on `http://localhost:5173`.
-4. The frontend container proxies `/api` to the backend.
-5. If the dashboard is empty, run `POST /api/v1/demo/seed`.
+1. Copy `backend/.env.example` to `backend/.env`.
+2. Copy `frontend/.env.example` to `frontend/.env`.
+3. Start the stack with `docker compose up --build`.
+4. Open the frontend on `http://localhost:5173`.
+5. The frontend container proxies `/api` to the backend.
+6. If the dashboard is empty, run `POST /api/v1/demo/seed`.
 
 ## Important runtime defaults
 

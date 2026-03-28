@@ -4,12 +4,12 @@ import hashlib
 import hmac
 import json
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 import httpx
 
-from app.core.config import Settings
+from app.core.config import Settings, StripeConnectMode
 
 
 class StripeServiceError(RuntimeError):
@@ -61,10 +61,47 @@ def _parse_signature_header(signature_header: str) -> tuple[int, list[str]]:
 class StripeConnectService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._resolved_connect_mode: StripeConnectMode | None = None
 
     @property
     def enabled(self) -> bool:
         return bool(self.settings.stripe_secret_key)
+
+    def _active_connect_mode(self) -> StripeConnectMode:
+        return self._resolved_connect_mode or self.settings.stripe_connect_mode
+
+    def _should_fallback_to_v1(self, exc: StripeServiceError) -> bool:
+        if self.settings.stripe_connect_mode != StripeConnectMode.AUTO:
+            return False
+        normalized_message = exc.message.casefold()
+        return "accounts v2 is not enabled" in normalized_message or "connect/accounts-v2" in normalized_message
+
+    def _run_connect_request(
+        self,
+        *,
+        v1_request: Callable[[], dict[str, Any]],
+        v2_request: Callable[[], dict[str, Any]],
+    ) -> dict[str, Any]:
+        connect_mode = self._active_connect_mode()
+        if connect_mode == StripeConnectMode.V1:
+            result = v1_request()
+            self._resolved_connect_mode = StripeConnectMode.V1
+            return result
+        if connect_mode == StripeConnectMode.V2:
+            result = v2_request()
+            self._resolved_connect_mode = StripeConnectMode.V2
+            return result
+
+        try:
+            result = v2_request()
+            self._resolved_connect_mode = StripeConnectMode.V2
+            return result
+        except StripeServiceError as exc:
+            if not self._should_fallback_to_v1(exc):
+                raise
+            result = v1_request()
+            self._resolved_connect_mode = StripeConnectMode.V1
+            return result
 
     def _headers(
         self,
@@ -143,60 +180,98 @@ class StripeConnectService:
         raise StripeServiceError("Stripe request failed after retries.", status_code=502)
 
     def create_connected_account(self, *, email: str, display_name: str) -> dict[str, Any]:
-        return self._request(
-            "POST",
-            "/v2/core/accounts",
-            api_version=self.settings.stripe_connect_api_version,
-            json_payload={
-                "contact_email": email,
-                "display_name": display_name,
-                "defaults": {
-                    "responsibilities": {
-                        "fees_collector": "application",
-                        "losses_collector": "application",
-                    }
+        return self._run_connect_request(
+            v1_request=lambda: self._request(
+                "POST",
+                "/v1/accounts",
+                api_version=self.settings.stripe_api_version,
+                form_payload={
+                    "type": "express",
+                    "country": "US",
+                    "email": email,
+                    "business_type": "individual",
+                    "capabilities": {"transfers": {"requested": True}},
+                    "metadata": {
+                        "platform": self.settings.project_name,
+                        "display_name": display_name,
+                    },
                 },
-                "dashboard": "express",
-                "identity": {"country": "us", "entity_type": "individual"},
-                "configuration": {
-                    "recipient": {
-                        "capabilities": {
-                            "stripe_balance": {"stripe_transfers": {"requested": True}}
+            ),
+            v2_request=lambda: self._request(
+                "POST",
+                "/v2/core/accounts",
+                api_version=self.settings.stripe_connect_api_version,
+                json_payload={
+                    "contact_email": email,
+                    "display_name": display_name,
+                    "defaults": {
+                        "responsibilities": {
+                            "fees_collector": "application",
+                            "losses_collector": "application",
                         }
-                    }
+                    },
+                    "dashboard": "express",
+                    "identity": {"country": "us", "entity_type": "individual"},
+                    "configuration": {
+                        "recipient": {
+                            "capabilities": {
+                                "stripe_balance": {"stripe_transfers": {"requested": True}}
+                            }
+                        }
+                    },
+                    "include": ["configuration.recipient", "identity", "requirements"],
                 },
-                "include": ["configuration.recipient", "identity", "requirements"],
-            },
+            ),
         )
 
     def retrieve_connected_account(self, account_id: str) -> dict[str, Any]:
-        return self._request(
-            "GET",
-            f"/v2/core/accounts/{account_id}",
-            api_version=self.settings.stripe_connect_api_version,
-            params=[
-                ("include", "configuration.recipient"),
-                ("include", "identity"),
-                ("include", "requirements"),
-            ],
+        return self._run_connect_request(
+            v1_request=lambda: self._request(
+                "GET",
+                f"/v1/accounts/{account_id}",
+                api_version=self.settings.stripe_api_version,
+            ),
+            v2_request=lambda: self._request(
+                "GET",
+                f"/v2/core/accounts/{account_id}",
+                api_version=self.settings.stripe_connect_api_version,
+                params=[
+                    ("include", "configuration.recipient"),
+                    ("include", "identity"),
+                    ("include", "requirements"),
+                ],
+            ),
         )
 
     def create_onboarding_link(self, account_id: str) -> dict[str, Any]:
-        return self._request(
-            "POST",
-            "/v2/core/account_links",
-            api_version=self.settings.stripe_account_links_api_version,
-            json_payload={
-                "account": account_id,
-                "use_case": {
+        return self._run_connect_request(
+            v1_request=lambda: self._request(
+                "POST",
+                "/v1/account_links",
+                api_version=self.settings.stripe_api_version,
+                form_payload={
+                    "account": account_id,
                     "type": "account_onboarding",
-                    "account_onboarding": {
-                        "configurations": ["recipient"],
-                        "refresh_url": self.settings.stripe_connect_refresh_url_resolved,
-                        "return_url": self.settings.stripe_connect_return_url_resolved,
+                    "refresh_url": self.settings.stripe_connect_refresh_url_resolved,
+                    "return_url": self.settings.stripe_connect_return_url_resolved,
+                },
+            ),
+            v2_request=lambda: self._request(
+                "POST",
+                "/v2/core/account_links",
+                api_version=self.settings.stripe_account_links_api_version,
+                json_payload={
+                    "account": account_id,
+                    "use_case": {
+                        "type": "account_onboarding",
+                        "account_onboarding": {
+                            "configurations": ["recipient"],
+                            "refresh_url": self.settings.stripe_connect_refresh_url_resolved,
+                            "return_url": self.settings.stripe_connect_return_url_resolved,
+                        },
                     },
                 },
-            },
+            ),
         )
 
     def create_dashboard_link(self, account_id: str) -> dict[str, Any]:

@@ -42,9 +42,12 @@
 - ✅ Backtester com custos, slippage, cooldown, max daily loss e métricas detalhadas
 - ✅ Simulador de execução local com tracking de ordens, execuções e posições
 - ✅ Demo seed flow completo para ambiente de demonstração
+- ✅ Email de confirmação HTML com branding AlphaView via SMTP
 
 ### 🖥️ Dashboard Profissional
 - ✅ Interface React multi-página: Overview, Signals, Positions, Trades, Backtests, Models, Logs, Settings
+- ✅ Browser de mercados/símbolos no Overview para carregar o gráfico de candles por exchange
+- ✅ Dashboard orientado por padrão para Europa, com universe/quotes via EODHD e candles europeus via EODHD daily ou IBKR intraday no Overview
 - ✅ Design moderno com gradientes, glassmorphism e animações suaves
 - ✅ Visualizações em tempo real e métricas de performance
 
@@ -112,8 +115,11 @@
 ### 1️⃣ Configurar ambiente
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item backend/.env.example backend/.env
+Copy-Item frontend/.env.example frontend/.env
 ```
+
+Preencha pelo menos `backend/.env` com `AUTH_SECRET_KEY`, `EMAIL_SMTP_*`, `EMAIL_FROM_EMAIL` e as chaves Stripe se for testar onboarding/billing.
 
 ### 2️⃣ Iniciar a stack completa
 
@@ -153,9 +159,13 @@ EMAIL_SMTP_PORT=587
 EMAIL_SMTP_USERNAME=
 EMAIL_SMTP_PASSWORD=
 EMAIL_FROM_EMAIL=
+IBKR_HOST=host.docker.internal
+IBKR_PORT=7497
+EODHD_API_TOKEN=
 WITHDRAWALS_ENABLED=false
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_SECRET_KEY=
+STRIPE_CONNECT_MODE=auto
 STRIPE_WEBHOOK_SECRET=
 STRIPE_CHECKOUT_SUCCESS_URL=
 STRIPE_CHECKOUT_CANCEL_URL=
@@ -164,14 +174,16 @@ FRONTEND_BASE_URL=http://localhost:5173
 
 ### Fluxo recomendado
 
-1. Copie `.env.example` para `.env` e preencha as variáveis de auth, SMTP Gmail-compatible e Stripe.
-2. Suba a stack com `docker compose up --build`.
-3. Crie a primeira conta no ecrã de login do frontend.
-4. Confirme o código de 6 dígitos enviado para o email antes de tentar entrar no dashboard.
-5. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
-6. Entre em **Billing** para abrir o Stripe Checkout ou o Billing Portal.
-7. Configure os URLs de `STRIPE_CHECKOUT_*` e o `STRIPE_WEBHOOK_SECRET` antes de expor o fluxo de billing.
-8. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
+1. Copie `backend/.env.example` para `backend/.env` e `frontend/.env.example` para `frontend/.env`.
+2. Preencha `backend/.env` com as variáveis de auth, SMTP Gmail-compatible, Stripe, `EODHD_API_TOKEN` para universe/quotes europeus e `IBKR_HOST` se quiser candles intraday europeus no dashboard.
+3. Suba a stack com `docker compose up --build`.
+4. Crie a primeira conta no ecrã de login do frontend.
+5. Confirme o código de 6 dígitos enviado para o email antes de tentar entrar no dashboard.
+6. Entre em **Account** para ligar a conta Stripe e concluir o onboarding.
+7. Entre em **Billing** para abrir o Stripe Checkout ou o Billing Portal.
+8. `STRIPE_CONNECT_MODE=auto` tenta `Accounts v2` primeiro e recua para `v1/accounts` quando a plataforma Stripe ainda nÃ£o tem `Accounts v2` ativo.
+9. Configure os URLs de `STRIPE_CHECKOUT_*` e o `STRIPE_WEBHOOK_SECRET` antes de expor o fluxo de billing.
+10. Ative `WITHDRAWALS_ENABLED=true` apenas quando quiser testar pedidos de saque em modo de teste.
 
 ---
 
@@ -221,7 +233,9 @@ npm install
 npm run dev
 ```
 
-> 💡 **Nota:** Em desenvolvimento local, o Vite faz proxy de `/api` para `http://localhost:18000` por defeito, ou para `VITE_DEV_API_PROXY` se esse valor estiver definido.
+> 💡 **Nota:** Em desenvolvimento local, o Vite lê `frontend/.env` e faz proxy de `/api` para `http://localhost:18000` por defeito, ou para `VITE_DEV_API_PROXY` se esse valor estiver definido.
+>
+> O backend lê `backend/.env`. O projeto não depende mais de `.env` na raiz.
 
 ---
 
@@ -270,7 +284,9 @@ python -m app.workers.retrain_worker `
 | `POST` | `/api/v1/auth/login` | Autenticar utilizador |
 | `GET` | `/api/v1/auth/me` | Obter utilizador autenticado |
 | `POST` | `/api/v1/market-data/backfill` | Backfill de dados históricos |
-| `GET` | `/api/v1/market-data/bars` | Consultar barras OHLCV |
+| `GET` | `/api/v1/market-data/bars` | Consultar barras OHLCV, com `1day` via EODHD e refresh intraday europeu via IBKR quando o Gateway/TWS estiver disponível |
+| `GET` | `/api/v1/market-data/symbols` | Listar símbolos/mercados rastreados para o gráfico |
+| `GET` | `/api/v1/market-data/universe` | Pesquisar o universo europeu via EODHD, com quotes reais/delayed da EODHD e fallback local quando necessário |
 | `POST` | `/api/v1/features/materialize` | Materializar features |
 | `POST` | `/api/v1/models/train` | Treinar modelo |
 | `GET` | `/api/v1/models/latest` | Obter último modelo |
@@ -327,6 +343,8 @@ python -m app.workers.retrain_worker `
 - 🤖 Reinforcement learning permanece fora do escopo do baseline vendável
 - 💳 Billing Stripe já está ligado ao dashboard, mas ainda depende de `price_id` manual e não tem catálogo interno de planos
 - ✉️ O envio do código de confirmação depende de SMTP compatível com Gmail configurado com credenciais válidas
+- 🌍 O universo e as cotações europeias agora dependem de `EODHD_API_TOKEN`; candles intraday europeus continuam a depender de `IBKR_HOST` e do IBKR Gateway/TWS
+- 📉 O token EODHD atual não tem entitlement intraday; `1min/5min/15min` na Europa continuam a degradar para IBKR ou preview sintético
 
 ---
 

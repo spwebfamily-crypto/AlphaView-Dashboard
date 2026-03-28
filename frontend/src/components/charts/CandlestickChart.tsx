@@ -7,6 +7,7 @@ type CandlestickChartProps = {
   bars: MarketBar[];
   symbol: string;
   sourceLabel?: string;
+  currencyCode?: string | null;
 };
 
 const DEFAULT_VISIBLE_BARS = 36;
@@ -28,7 +29,7 @@ function getY(value: number, min: number, max: number, height: number, top: numb
   return top + ((max - value) / range) * (height - top - bottom);
 }
 
-export function CandlestickChart({ bars, symbol, sourceLabel }: CandlestickChartProps) {
+export function CandlestickChart({ bars, symbol, sourceLabel, currencyCode }: CandlestickChartProps) {
   const initialVisibleCount = getInitialVisibleCount(bars.length);
   const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
   const [windowStart, setWindowStart] = useState(Math.max(0, bars.length - initialVisibleCount));
@@ -105,7 +106,7 @@ export function CandlestickChart({ bars, symbol, sourceLabel }: CandlestickChart
           <strong>{symbol} candlestick view</strong>
         </div>
         <div className="price-badge">
-          <span>{formatCurrency(inspectedBar.close)}</span>
+          <span>{formatCurrency(inspectedBar.close, currencyCode)}</span>
           <strong className={priceDelta >= 0 ? "positive" : "negative"}>
             {priceDelta >= 0 ? "+" : ""}
             {priceDelta.toFixed(2)} ({priceDeltaPercent.toFixed(2)}%)
@@ -173,19 +174,19 @@ export function CandlestickChart({ bars, symbol, sourceLabel }: CandlestickChart
         </div>
         <div className="candle-inspector-card">
           <span className="metric-label">Open</span>
-          <strong>{formatCurrency(inspectedBar.open)}</strong>
+          <strong>{formatCurrency(inspectedBar.open, currencyCode)}</strong>
         </div>
         <div className="candle-inspector-card">
           <span className="metric-label">High</span>
-          <strong>{formatCurrency(inspectedBar.high)}</strong>
+          <strong>{formatCurrency(inspectedBar.high, currencyCode)}</strong>
         </div>
         <div className="candle-inspector-card">
           <span className="metric-label">Low</span>
-          <strong>{formatCurrency(inspectedBar.low)}</strong>
+          <strong>{formatCurrency(inspectedBar.low, currencyCode)}</strong>
         </div>
         <div className="candle-inspector-card">
           <span className="metric-label">Close</span>
-          <strong>{formatCurrency(inspectedBar.close)}</strong>
+          <strong>{formatCurrency(inspectedBar.close, currencyCode)}</strong>
         </div>
         <div className="candle-inspector-card">
           <span className="metric-label">Volume</span>

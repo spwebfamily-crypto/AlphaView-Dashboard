@@ -22,6 +22,8 @@ def runtime_settings(request: Request) -> RuntimeSettingsResponse:
         execution_mode=settings.execution_mode.value,
         live_trading_enabled=settings.enable_live_trading,
         broker_adapter=settings.broker_adapter,
+        market_region_label=settings.market_region_label,
+        market_status_exchange=settings.market_status_exchange,
         default_symbols=settings.default_symbols,
         default_timeframe=settings.default_timeframe,
         available_market_data_sources=configured_market_data_sources(settings),

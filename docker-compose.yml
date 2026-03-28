@@ -3,16 +3,14 @@ services:
     image: postgres:16-alpine
     container_name: alphaview-db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-alphaview}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    env_file:
+      - backend/.env
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-alphaview}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,36 +21,13 @@ services:
       dockerfile: infra/backend.Dockerfile
     container_name: alphaview-backend
     restart: unless-stopped
+    env_file:
+      - backend/.env
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      PROJECT_NAME: ${PROJECT_NAME:-AlphaView Dashboard}
-      APP_VERSION: ${APP_VERSION:-0.1.0}
-      APP_ENV: ${APP_ENV:-development}
-      EXECUTION_MODE: ${EXECUTION_MODE:-PAPER}
-      ENABLE_LIVE_TRADING: ${ENABLE_LIVE_TRADING:-false}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@db:5432/alphaview}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://frontend:5173}
-      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
-      POLYGON_BASE_URL: ${POLYGON_BASE_URL:-https://api.massive.com}
-      POLYGON_WEBSOCKET_URL: ${POLYGON_WEBSOCKET_URL:-wss://socket.massive.com/stocks}
-      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
-      FINNHUB_SECRET_KEY: ${FINNHUB_SECRET_KEY:-}
-      FINNHUB_BASE_URL: ${FINNHUB_BASE_URL:-https://finnhub.io/api/v1}
-      IBKR_HOST: ${IBKR_HOST:-}
-      IBKR_PORT: ${IBKR_PORT:-7497}
-      IBKR_CLIENT_ID: ${IBKR_CLIENT_ID:-101}
-      BROKER_ADAPTER: ${BROKER_ADAPTER:-mock}
-      DEFAULT_SYMBOLS: ${DEFAULT_SYMBOLS:-AAPL,MSFT,NVDA}
-      DEFAULT_TIMEFRAME: ${DEFAULT_TIMEFRAME:-1min}
-      ARTIFACT_ROOT: ${ARTIFACT_ROOT:-../reports}
-      MODEL_REGISTRY_DIR: ${MODEL_REGISTRY_DIR:-../reports/model_runs}
-      BACKTEST_REPORT_DIR: ${BACKTEST_REPORT_DIR:-../reports/backtests}
-      DEMO_SEED_PATH: ${DEMO_SEED_PATH:-../examples/sample_demo_seed.json}
-      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
     ports:
-      - "${BACKEND_PORT:-18000}:8000"
+      - "18000:8000"
     healthcheck:
       test:
         [
@@ -70,9 +45,6 @@ services:
     build:
       context: .
       dockerfile: infra/frontend.Dockerfile
-      args:
-        VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL:-/api/v1}
-        VITE_APP_MODE: ${EXECUTION_MODE:-PAPER}
     container_name: alphaview-frontend
     restart: unless-stopped
     depends_on:

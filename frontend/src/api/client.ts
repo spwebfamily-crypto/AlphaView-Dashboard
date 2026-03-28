@@ -3,7 +3,7 @@ import type { BillingPortalSessionPayload, BillingSummary, CheckoutSessionPayloa
 import type { BrokerStatus, Execution, Order } from "../types/broker";
 import type { DashboardSnapshot } from "../types/dashboard";
 import type { HealthResponse } from "../types/health";
-import type { MarketBar, StreamPreview } from "../types/marketData";
+import type { MarketBar, MarketUniversePage, StreamPreview, TrackedSymbol } from "../types/marketData";
 import type { MarketStatus } from "../types/marketStatus";
 import type { RuntimeSettings } from "../types/runtime";
 import type { WalletSummary, WithdrawalRequest } from "../types/wallet";
@@ -73,7 +73,7 @@ async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
-function buildQuery(params: Record<string, string | number | undefined>) {
+function buildQuery(params: Record<string, string | number | boolean | undefined>) {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
@@ -169,7 +169,7 @@ export async function seedDemoData(): Promise<{ status: string }> {
   return apiFetch<{ status: string }>("/demo/seed", {
     method: "POST",
     body: JSON.stringify({
-      symbols: ["AAPL", "MSFT", "NVDA"],
+      symbols: ["SAP.DE", "MC.PA", "AIR.PA"],
       timeframe: "1min",
       days: 5,
     }),
@@ -192,14 +192,62 @@ export async function fetchExecutions(): Promise<Execution[]> {
   return apiFetch<Execution[]>("/broker/executions");
 }
 
-export async function fetchMarketBars(symbol: string, timeframe = "1min", limit = 72): Promise<MarketBar[]> {
+export async function fetchMarketBars(
+  symbol: string,
+  timeframe = "1min",
+  limit = 72,
+  refresh = false,
+): Promise<MarketBar[]> {
   const query = buildQuery({
     symbol: symbol.toUpperCase(),
     timeframe,
     limit,
+    refresh,
   });
 
   return apiFetch<MarketBar[]>(`/market-data/bars?${query}`);
+}
+
+export async function fetchMarketUniverse(options?: {
+  exchange?: string;
+  query?: string;
+  activeOnly?: boolean;
+  limit?: number;
+}): Promise<TrackedSymbol[]> {
+  const query = buildQuery({
+    exchange: options?.exchange,
+    query: options?.query,
+    active_only: options?.activeOnly ?? true,
+    limit: options?.limit ?? 250,
+  });
+
+  return apiFetch<TrackedSymbol[]>(`/market-data/symbols?${query}`);
+}
+
+export async function fetchLiveMarketUniverse(options?: {
+  locale?: string;
+  exchange?: string;
+  query?: string;
+  activeOnly?: boolean;
+  limit?: number;
+  cursor?: string;
+  securityType?: string;
+  currency?: string;
+  includeQuotes?: boolean;
+}): Promise<MarketUniversePage> {
+  const query = buildQuery({
+    locale: options?.locale,
+    exchange: options?.exchange,
+    query: options?.query,
+    active_only: options?.activeOnly ?? true,
+    limit: options?.limit ?? 48,
+    cursor: options?.cursor,
+    security_type: options?.securityType ?? "CS",
+    currency: options?.currency,
+    include_quotes: options?.includeQuotes ?? true,
+  });
+
+  return apiFetch<MarketUniversePage>(`/market-data/universe?${query}`);
 }
 
 export async function fetchMarketPreview(symbol: string, timeframe = "1min", points = 72): Promise<StreamPreview> {

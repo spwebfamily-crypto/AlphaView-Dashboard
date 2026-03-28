@@ -81,7 +81,7 @@ const pageCopy: Record<PageKey, { eyebrow: string; title: string; description: s
   settings: {
     eyebrow: "Runtime controls",
     title: "Settings and providers",
-    description: "Check runtime defaults, market-status providers, and the simulation adapter state.",
+    description: "Check runtime defaults, the Europe market-status target, and the simulation adapter state.",
   },
 };
 

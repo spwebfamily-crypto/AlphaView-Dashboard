@@ -4,9 +4,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import app.services.auth_service as auth_service
+from app.core.config import StripeConnectMode
 from app.models.user import User
 from app.services.email_service import SmtpEmailService
-from app.services.stripe_service import StripeConnectService
+from app.services.stripe_service import StripeConnectService, StripeServiceError
 
 
 def test_protected_routes_require_authentication(client) -> None:
@@ -124,6 +125,93 @@ def test_wallet_can_create_stripe_onboarding_link(authenticated_client, db_sessi
     user = db_session.scalar(select(User).where(User.email == "trader@example.com"))
     assert user is not None
     assert user.stripe_connected_account_id == "acct_test_connect"
+
+
+def test_stripe_connect_auto_falls_back_to_v1_when_accounts_v2_is_unavailable(test_settings, monkeypatch) -> None:
+    test_settings.stripe_secret_key = "sk_test_example"
+    test_settings.stripe_connect_mode = StripeConnectMode.AUTO
+    stripe_service = StripeConnectService(test_settings)
+    request_paths: list[str] = []
+
+    def fake_request(self, method, path, **kwargs):
+        request_paths.append(path)
+        if path == "/v2/core/accounts":
+            raise StripeServiceError(
+                "Accounts v2 is not enabled for your platform. If you're interested in using this API with your integration, please visit https://docs.stripe.com/connect/accounts-v2.",
+                status_code=400,
+            )
+        if path == "/v1/accounts":
+            return {"id": "acct_test_connect"}
+        if path == "/v1/account_links":
+            return {"url": "https://connect.stripe.test/onboarding"}
+        raise AssertionError(f"Unexpected Stripe path: {path}")
+
+    monkeypatch.setattr(StripeConnectService, "_request", fake_request)
+
+    account = stripe_service.create_connected_account(email="trader@example.com", display_name="Trader Test")
+    link = stripe_service.create_onboarding_link(account["id"])
+
+    assert account["id"] == "acct_test_connect"
+    assert link["url"] == "https://connect.stripe.test/onboarding"
+    assert request_paths == ["/v2/core/accounts", "/v1/accounts", "/v1/account_links"]
+
+
+def test_wallet_summary_supports_stripe_v1_account_payload(
+    authenticated_client,
+    db_session: Session,
+    monkeypatch,
+) -> None:
+    authenticated_client.app.state.settings.stripe_secret_key = "sk_test_example"
+
+    user = db_session.scalar(select(User).where(User.email == "trader@example.com"))
+    assert user is not None
+    user.stripe_connected_account_id = "acct_test_connect"
+    db_session.commit()
+
+    monkeypatch.setattr(
+        StripeConnectService,
+        "retrieve_connected_account",
+        lambda self, account_id: {
+            "requirements": {
+                "currently_due": [],
+                "past_due": [],
+                "eventually_due": [],
+                "disabled_reason": None,
+            },
+            "capabilities": {"transfers": "active"},
+            "payouts_enabled": True,
+        },
+    )
+
+    response = authenticated_client.get("/api/v1/wallet/summary")
+
+    assert response.status_code == 200
+    payload = response.json()["stripe"]
+    assert payload["account_id"] == "acct_test_connect"
+    assert payload["onboarding_complete"] is True
+    assert payload["transfers_enabled"] is True
+    assert payload["requirements_status"] == "complete"
+    assert payload["capability_status"] == "active"
+
+
+def test_wallet_onboarding_returns_actionable_connect_activation_message(authenticated_client, monkeypatch) -> None:
+    authenticated_client.app.state.settings.stripe_secret_key = "sk_test_example"
+
+    def raise_connect_not_enabled(self, email, display_name):
+        raise StripeServiceError(
+            "You can only create new accounts if you've signed up for Connect, which you can do at https://dashboard.stripe.com/connect.",
+            status_code=400,
+        )
+
+    monkeypatch.setattr(StripeConnectService, "create_connected_account", raise_connect_not_enabled)
+
+    response = authenticated_client.post("/api/v1/wallet/stripe/onboarding-link")
+
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Stripe Connect ainda nao esta ativado nesta conta. Ative em https://dashboard.stripe.com/connect e tente novamente."
+    )
 
 
 def test_wallet_withdrawal_submits_transfer_and_payout(
