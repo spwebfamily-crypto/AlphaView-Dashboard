@@ -853,7 +853,9 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
           <DataTable
             columns={["Symbol", "Bias", "Confidence", "Why it matters", "Time"]}
             rows={rankedSignals.slice(0, 8).map((signal) => [
-              signal.symbol,
+              <span className="table-symbol" key={`${signal.symbol}-overview-symbol`}>
+                {signal.symbol}
+              </span>,
               <span className={`signal-pill ${signal.signal_type.toLowerCase()}`} key={`${signal.symbol}-bias`}>
                 {signal.signal_type}
               </span>,
@@ -861,6 +863,8 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
               signal.reason ?? "Research this chart for confirmation.",
               formatDateTime(signal.timestamp),
             ])}
+            caption="Top-ranked research tape"
+            footnote="Use this shortlist to decide what deserves chart review next. Signals remain research outputs, not trade guarantees."
           />
         </article>
 
@@ -876,7 +880,7 @@ export function Overview({ snapshot, runtime, loading, error }: OverviewProps) {
               timestamp: point.timestamp,
               value: point.equity ?? 0,
             }))}
-            stroke="#2563eb"
+            stroke="#9ca3af"
             formatValue={formatCurrency}
           />
         </article>

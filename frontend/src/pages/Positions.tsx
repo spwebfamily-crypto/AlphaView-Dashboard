@@ -1,4 +1,5 @@
 import { DataTable } from "../components/DataTable";
+import { PageIntro } from "../components/page/PageIntro";
 import type { DashboardSnapshot } from "../types/dashboard";
 import { formatCurrency } from "../utils/format";
 
@@ -8,9 +9,67 @@ type PositionsProps = {
 
 export function Positions({ snapshot }: PositionsProps) {
   const positions = snapshot?.positions ?? [];
+  const totalMarketValue = positions.reduce((total, position) => total + (position.market_value ?? 0), 0);
+  const totalPnl = positions.reduce((total, position) => total + (position.unrealized_pnl ?? 0), 0);
+  const profitableCount = positions.filter((position) => (position.unrealized_pnl ?? 0) > 0).length;
+  const leadPosition = [...positions].sort((left, right) => (right.market_value ?? 0) - (left.market_value ?? 0))[0] ?? null;
+  const rankedPositions = [...positions].sort((left, right) => (right.market_value ?? 0) - (left.market_value ?? 0));
 
   return (
     <div className="dashboard-page">
+      <PageIntro
+        eyebrow="Exposure Desk"
+        title="Portfolio heatmap"
+        description="Track concentration, unrealized PnL, and the dominant names in the paper portfolio before changing exposure."
+        stats={[
+          {
+            label: "Gross exposure",
+            value: formatCurrency(totalMarketValue),
+            note: "Marked-to-market value across open simulated positions",
+            tone: "accent",
+          },
+          {
+            label: "Unrealized PnL",
+            value: formatCurrency(totalPnl),
+            note: `${profitableCount}/${positions.length || 0} positions currently green`,
+            tone: totalPnl >= 0 ? "positive" : "negative",
+          },
+          {
+            label: "Open positions",
+            value: positions.length,
+            note: "Names currently active in the simulator inventory",
+            tone: "neutral",
+          },
+          {
+            label: "Largest line",
+            value: leadPosition?.symbol ?? "-",
+            note: leadPosition ? formatCurrency(leadPosition.market_value) : "No active exposure",
+            tone: "accent",
+          },
+        ]}
+      />
+
+      {rankedPositions.length > 0 ? (
+        <section className="detail-card-grid">
+          {rankedPositions.slice(0, 3).map((position, index) => (
+            <article className="detail-card" key={`${position.symbol ?? "asset"}-${index}`}>
+              <div className="detail-card-topline">
+                <span className="metric-label">{index === 0 ? "Largest exposure" : "Portfolio line"}</span>
+                <span className={`tone-pill ${getPositionTone(position.status, position.unrealized_pnl)}`}>{position.status}</span>
+              </div>
+              <strong>{position.symbol ?? `Asset ${index + 1}`}</strong>
+              <p>
+                {position.quantity.toFixed(2)} shares at {formatCurrency(position.average_price)} average price.
+              </p>
+              <div className="detail-card-meta">
+                <span>{formatCurrency(position.market_value)} market value</span>
+                <span className={getNumberClass(position.unrealized_pnl)}>{formatCurrency(position.unrealized_pnl)} PnL</span>
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
       <section className="panel page-panel">
         <div className="panel-header">
           <div>
@@ -21,15 +80,47 @@ export function Positions({ snapshot }: PositionsProps) {
         <DataTable
           columns={["Symbol", "Status", "Quantity", "Avg Price", "Market Value", "Unrealized PnL"]}
           rows={positions.map((position, index) => [
-            position.symbol ?? `Asset ${index + 1}`,
-            position.status,
+            <span className="table-symbol" key={`symbol-${position.symbol ?? index}`}>
+              {position.symbol ?? `Asset ${index + 1}`}
+            </span>,
+            <span className={`tone-pill ${getPositionTone(position.status, position.unrealized_pnl)}`} key={`status-${position.symbol ?? index}`}>
+              {position.status}
+            </span>,
             position.quantity.toFixed(2),
             formatCurrency(position.average_price),
             formatCurrency(position.market_value),
-            formatCurrency(position.unrealized_pnl),
+            <span className={getNumberClass(position.unrealized_pnl)} key={`pnl-${position.symbol ?? index}`}>
+              {formatCurrency(position.unrealized_pnl)}
+            </span>,
           ])}
+          caption="Current simulated holdings"
+          footnote="Exposure values are marked from the latest stored prices and should be treated as paper-trading state, not live brokerage balances."
         />
       </section>
     </div>
   );
+}
+
+function getPositionTone(status: string, unrealizedPnl?: number | null) {
+  const normalizedStatus = status.toLowerCase();
+  if (normalizedStatus.includes("closed")) {
+    return "tone-neutral";
+  }
+  if (normalizedStatus.includes("open") || normalizedStatus.includes("active")) {
+    return (unrealizedPnl ?? 0) >= 0 ? "tone-positive" : "tone-negative";
+  }
+  return "tone-accent";
+}
+
+function getNumberClass(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) {
+    return "table-number";
+  }
+  if (value > 0) {
+    return "table-number is-positive";
+  }
+  if (value < 0) {
+    return "table-number is-negative";
+  }
+  return "table-number";
 }

@@ -8,6 +8,7 @@ import {
   fetchWithdrawals,
   refreshStripeStatus,
 } from "../api/client";
+import { PageIntro } from "../components/page/PageIntro";
 import type { AuthUser } from "../types/auth";
 import type { WalletSummary, WithdrawalRequest } from "../types/wallet";
 import { formatCurrency, formatDateTime } from "../utils/format";
@@ -136,9 +137,98 @@ export function Account({ user }: AccountProps) {
       dashboard_access: Boolean(user.stripe_connected_account_id),
     },
   };
+  const pendingWithdrawals = withdrawals.filter((item) => /pending|queued|processing/i.test(item.status)).length;
+  const latestWithdrawal = [...withdrawals].sort((left, right) => right.created_at.localeCompare(left.created_at))[0] ?? null;
+  const stripeStatusTone = getStripeTone(summary.stripe);
+  const identityTone = user.email_verified_at ? "positive" : "warning";
 
   return (
     <div className="dashboard-page">
+      <PageIntro
+        eyebrow="Account Center"
+        title="Identity, payouts, and cash access"
+        description="Manage the authenticated operator profile, Stripe Connect readiness, and withdrawal flow without mixing simulated PnL with real cash operations."
+        stats={[
+          {
+            label: "Account role",
+            value: user.role,
+            note: user.is_active ? "Session is active in the current dashboard" : "User is currently disabled",
+            tone: user.is_active ? "positive" : "negative",
+          },
+          {
+            label: "Email status",
+            value: user.email_verified_at ? "Verified" : "Pending",
+            note: user.email_verified_at ? formatDateTime(user.email_verified_at) : "Verification still required",
+            tone: identityTone,
+          },
+          {
+            label: "Withdrawable balance",
+            value: formatCurrency(summary.withdrawable_balance_cents / 100, summary.currency),
+            note: `${pendingWithdrawals} withdrawal requests still in-flight`,
+            tone: summary.withdrawals_enabled ? "accent" : "neutral",
+          },
+          {
+            label: "Stripe Connect",
+            value: summary.stripe.transfers_enabled ? "Ready" : summary.stripe.account_id ? "In progress" : "Not linked",
+            note: summary.stripe.account_id ?? "No connected account yet",
+            tone: stripeStatusTone,
+          },
+        ]}
+      />
+
+      <section className="detail-card-grid">
+        <article className="detail-card">
+          <div className="detail-card-topline">
+            <span className="metric-label">Identity</span>
+            <span className={`tone-pill tone-${identityTone}`}>{user.is_active ? "Active" : "Disabled"}</span>
+          </div>
+          <strong>{user.full_name ?? user.email}</strong>
+          <p>The authenticated session controls payout access, Stripe onboarding actions, and withdrawal requests.</p>
+          <div className="detail-card-meta">
+            <span>{user.email}</span>
+            <span>{user.email_verified_at ? "Email verified" : "Email verification pending"}</span>
+          </div>
+        </article>
+
+        <article className="detail-card">
+          <div className="detail-card-topline">
+            <span className="metric-label">Stripe readiness</span>
+            <span className={`tone-pill tone-${stripeStatusTone}`}>{summary.stripe.transfers_enabled ? "Payout ready" : "Needs action"}</span>
+          </div>
+          <strong>{summary.stripe.account_id ?? "No Stripe account connected"}</strong>
+          <p>
+            {summary.stripe.transfers_enabled
+              ? "Transfers can be enabled from the connected Stripe account when withdrawals are turned on."
+              : "Finish onboarding and requirements review before treating this account as payout-capable."}
+          </p>
+          <div className="detail-card-meta">
+            <span>{summary.stripe.requirements_status ?? "No requirements state yet"}</span>
+            <span>{summary.stripe.capability_status ?? "Capabilities pending"}</span>
+          </div>
+        </article>
+
+        <article className="detail-card">
+          <div className="detail-card-topline">
+            <span className="metric-label">Latest withdrawal</span>
+            <span className={`tone-pill ${latestWithdrawal ? getWithdrawalTone(latestWithdrawal.status) : "tone-neutral"}`}>
+              {latestWithdrawal?.status ?? "None"}
+            </span>
+          </div>
+          <strong>
+            {latestWithdrawal ? formatCurrency(latestWithdrawal.amount_cents / 100, latestWithdrawal.currency) : "No requests"}
+          </strong>
+          <p>
+            {latestWithdrawal
+              ? "Recent request recorded in the database and linked to payout/transfer references when available."
+              : "Withdrawal history will appear here after a request is created."}
+          </p>
+          <div className="detail-card-meta">
+            <span>{latestWithdrawal ? formatDateTime(latestWithdrawal.created_at) : "Waiting for activity"}</span>
+            <span>{latestWithdrawal?.stripe_payout_id ?? latestWithdrawal?.stripe_transfer_id ?? "No Stripe reference"}</span>
+          </div>
+        </article>
+      </section>
+
       <div className="page-grid compact">
         <section className="panel page-panel">
           <div className="panel-header">
@@ -158,11 +248,23 @@ export function Account({ user }: AccountProps) {
             </div>
             <div className="setting-row">
               <span>Role</span>
-              <strong>{user.role}</strong>
+              <strong>
+                <span className="tone-pill tone-accent">{user.role}</span>
+              </strong>
             </div>
             <div className="setting-row">
               <span>Session state</span>
-              <strong>{user.is_active ? "Active" : "Disabled"}</strong>
+              <strong>
+                <span className={`tone-pill tone-${user.is_active ? "positive" : "negative"}`}>
+                  {user.is_active ? "Active" : "Disabled"}
+                </span>
+              </strong>
+            </div>
+            <div className="setting-row">
+              <span>Email verification</span>
+              <strong>
+                <span className={`tone-pill tone-${identityTone}`}>{user.email_verified_at ? "Verified" : "Pending"}</span>
+              </strong>
             </div>
             <div className="setting-row">
               <span>Last login</span>
@@ -181,7 +283,7 @@ export function Account({ user }: AccountProps) {
           <div className="stack">
             <div className="setting-row">
               <span>Withdrawable balance</span>
-              <strong>{formatCurrency(summary.withdrawable_balance_cents / 100)}</strong>
+              <strong>{formatCurrency(summary.withdrawable_balance_cents / 100, summary.currency)}</strong>
             </div>
             <div className="setting-row">
               <span>Currency</span>
@@ -189,10 +291,14 @@ export function Account({ user }: AccountProps) {
             </div>
             <div className="setting-row">
               <span>Withdrawal engine</span>
-              <strong>{summary.withdrawals_enabled ? "Enabled" : "Disabled by default"}</strong>
+              <strong>
+                <span className={`tone-pill tone-${summary.withdrawals_enabled ? "positive" : "neutral"}`}>
+                  {summary.withdrawals_enabled ? "Enabled" : "Disabled by default"}
+                </span>
+              </strong>
             </div>
             <label className="auth-field slim">
-              <span>Amount (USD)</span>
+              <span>Amount ({summary.currency.toUpperCase()})</span>
               <input
                 inputMode="decimal"
                 onChange={(event) => setAmountInput(event.target.value)}
@@ -201,6 +307,9 @@ export function Account({ user }: AccountProps) {
                 value={amountInput}
               />
             </label>
+            <p className="helper-note">
+              Only ledger cash marked as withdrawable can be requested here. Paper-trading PnL remains isolated from payouts.
+            </p>
             <button className="seed-button" disabled={loading || submitting} onClick={handleWithdraw} type="button">
               {submitting ? "Submitting..." : "Request withdrawal"}
             </button>
@@ -221,16 +330,27 @@ export function Account({ user }: AccountProps) {
             </div>
             <div className="setting-row">
               <span>Onboarding</span>
-              <strong>{summary.stripe.onboarding_complete ? "Completed" : "Pending"}</strong>
+              <strong>
+                <span className={`tone-pill tone-${summary.stripe.onboarding_complete ? "positive" : "warning"}`}>
+                  {summary.stripe.onboarding_complete ? "Completed" : "Pending"}
+                </span>
+              </strong>
             </div>
             <div className="setting-row">
               <span>Transfers capability</span>
-              <strong>{summary.stripe.transfers_enabled ? "Active" : "Not ready"}</strong>
+              <strong>
+                <span className={`tone-pill tone-${summary.stripe.transfers_enabled ? "positive" : "warning"}`}>
+                  {summary.stripe.transfers_enabled ? "Active" : "Not ready"}
+                </span>
+              </strong>
             </div>
             <div className="setting-row">
               <span>Requirements status</span>
               <strong>{summary.stripe.requirements_status ?? "-"}</strong>
             </div>
+            <p className="helper-note">
+              Stripe Connect has to be fully onboarded before this account can move from identity setup into payout readiness.
+            </p>
             <div className="action-row">
               <button className="primary-button" onClick={handleCreateOnboardingLink} type="button">
                 {summary.stripe.account_id ? "Continue Stripe onboarding" : "Connect Stripe account"}
@@ -267,18 +387,19 @@ export function Account({ user }: AccountProps) {
                 <article className="withdrawal-card" key={item.id}>
                   <div>
                     <span className="eyebrow">Request #{item.id}</span>
-                    <strong>{formatCurrency(item.amount_cents / 100)}</strong>
+                    <strong>{formatCurrency(item.amount_cents / 100, item.currency)}</strong>
                   </div>
                   <div className="withdrawal-meta">
-                    <span>{item.status}</span>
+                    <span className={`tone-pill ${getWithdrawalTone(item.status)}`}>{item.status}</span>
                     <span>{formatDateTime(item.created_at)}</span>
+                    <span>{item.processed_at ? `Processed ${formatDateTime(item.processed_at)}` : "Waiting for processing"}</span>
                     <span>{item.failure_message ?? item.stripe_payout_id ?? item.stripe_transfer_id ?? "-"}</span>
                   </div>
                 </article>
               ))
             ) : (
               <p className="broker-note">
-                {loading ? "Loading wallet..." : "No withdrawal requests recorded for this account yet."}
+            {loading ? "Loading wallet..." : "No withdrawal requests recorded for this account yet."}
               </p>
             )}
           </div>
@@ -286,4 +407,31 @@ export function Account({ user }: AccountProps) {
       </div>
     </div>
   );
+}
+
+function getStripeTone(stripe: WalletSummary["stripe"]): "neutral" | "positive" | "warning" | "accent" {
+  if (stripe.transfers_enabled) {
+    return "positive";
+  }
+  if (stripe.account_id && stripe.onboarding_complete) {
+    return "accent";
+  }
+  if (stripe.account_id) {
+    return "warning";
+  }
+  return "neutral";
+}
+
+function getWithdrawalTone(status: string) {
+  const normalizedStatus = status.toLowerCase();
+  if (normalizedStatus.includes("paid") || normalizedStatus.includes("complete") || normalizedStatus.includes("success")) {
+    return "tone-positive";
+  }
+  if (normalizedStatus.includes("fail") || normalizedStatus.includes("cancel") || normalizedStatus.includes("rejected")) {
+    return "tone-negative";
+  }
+  if (normalizedStatus.includes("pending") || normalizedStatus.includes("queue") || normalizedStatus.includes("process")) {
+    return "tone-warning";
+  }
+  return "tone-accent";
 }

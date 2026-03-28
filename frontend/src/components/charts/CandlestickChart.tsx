@@ -197,8 +197,8 @@ export function CandlestickChart({ bars, symbol, sourceLabel, currencyCode }: Ca
       <svg className="candle-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${symbol} candlestick chart`}>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -236,7 +236,7 @@ export function CandlestickChart({ bars, symbol, sourceLabel, currencyCode }: Ca
                     y={topPadding}
                     width={slotWidth}
                     height={chartBottom - topPadding}
-                    fill="rgba(37, 99, 235, 0.08)"
+                    fill="rgba(239, 68, 68, 0.08)"
                     rx="8"
                   />
                   <line
@@ -244,7 +244,7 @@ export function CandlestickChart({ bars, symbol, sourceLabel, currencyCode }: Ca
                     x2={xCenter}
                     y1={topPadding}
                     y2={chartBottom}
-                    stroke="#2563eb"
+                    stroke="#ef4444"
                     strokeDasharray="4 5"
                     strokeWidth="1.5"
                   />

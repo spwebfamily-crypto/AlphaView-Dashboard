@@ -48,6 +48,9 @@
 - ✅ Interface React multi-página: Overview, Signals, Positions, Trades, Backtests, Models, Logs, Settings
 - ✅ Browser de mercados/símbolos no Overview para carregar o gráfico de candles por exchange
 - ✅ Dashboard orientado por padrão para Europa, com universe/quotes via EODHD e candles europeus via EODHD daily ou IBKR intraday no Overview
+- ✅ Páginas operacionais com hero KPI, cartões de prioridade e tabelas com contexto para sinais, exposição, execução, modelos, backtests e logs
+- ✅ Superfícies de Account, Billing e Settings com estados visuais, resumos executivos e fluxos mais claros
+- ✅ Redesign completo do shell com navegação em secções, topbar operacional e autenticação em layout command-center
 - ✅ Design moderno com gradientes, glassmorphism e animações suaves
 - ✅ Visualizações em tempo real e métricas de performance
 

@@ -5,6 +5,7 @@ import {
   createBillingPortalSession,
   fetchBillingSummary,
 } from "../api/client";
+import { PageIntro } from "../components/page/PageIntro";
 import type { BillingSummary } from "../types/billing";
 import { formatDateTime } from "../utils/format";
 
@@ -116,9 +117,89 @@ export function Billing() {
     checkout_ready: false,
     portal_ready: false,
   };
+  const billingTone = getBillingTone(currentSummary.billing_status);
+  const currentPlanLabel = currentSummary.billing_plan_code ?? "No plan";
+  const currentModeLabel = mode === "subscription" ? "Recurring plan" : "One-time payment";
 
   return (
     <div className="dashboard-page">
+      <PageIntro
+        eyebrow="Revenue Layer"
+        title="Billing and subscription controls"
+        description="Manage customer billing state, Stripe Checkout launch parameters, and portal access from the same commercial control surface."
+        stats={[
+          {
+            label: "Billing state",
+            value: currentSummary.billing_status ?? "Unlinked",
+            note: currentSummary.stripe_customer_id ?? "No Stripe customer linked yet",
+            tone: billingTone,
+          },
+          {
+            label: "Active plan",
+            value: currentPlanLabel,
+            note: currentSummary.billing_current_period_end
+              ? `Renews or ends ${formatDateTime(currentSummary.billing_current_period_end)}`
+              : "No active billing cycle stored",
+            tone: currentSummary.billing_plan_code ? "accent" : "neutral",
+          },
+          {
+            label: "Checkout launch",
+            value: currentSummary.checkout_ready ? "Ready" : "Blocked",
+            note: currentModeLabel,
+            tone: currentSummary.checkout_ready ? "positive" : "warning",
+          },
+          {
+            label: "Portal access",
+            value: currentSummary.portal_ready ? "Available" : "Waiting",
+            note: currentSummary.portal_ready ? "Customer can manage billing in Stripe" : "Stripe customer required first",
+            tone: currentSummary.portal_ready ? "positive" : "neutral",
+          },
+        ]}
+      />
+
+      <section className="detail-card-grid">
+        <article className="detail-card">
+          <div className="detail-card-topline">
+            <span className="metric-label">Customer record</span>
+            <span className={`tone-pill tone-${currentSummary.stripe_customer_id ? "positive" : "neutral"}`}>
+              {currentSummary.stripe_customer_id ? "Linked" : "Missing"}
+            </span>
+          </div>
+          <strong>{currentSummary.stripe_customer_id ?? "No Stripe customer"}</strong>
+          <p>Portal access and subscription lifecycle management depend on a linked Stripe customer record.</p>
+          <div className="detail-card-meta">
+            <span>{currentSummary.portal_ready ? "Portal can be opened" : "Portal still unavailable"}</span>
+            <span>{currentSummary.stripe_subscription_id ?? "No subscription id"}</span>
+          </div>
+        </article>
+
+        <article className="detail-card">
+          <div className="detail-card-topline">
+            <span className="metric-label">Checkout mode</span>
+            <span className={`tone-pill tone-${mode === "subscription" ? "accent" : "warning"}`}>{currentModeLabel}</span>
+          </div>
+          <strong>{priceId || "Price id required"}</strong>
+          <p>Use hosted Stripe Checkout for safer payment collection and keep the dashboard synchronized through webhooks.</p>
+          <div className="detail-card-meta">
+            <span>{planCode || "No plan code set"}</span>
+            <span>{quantity} unit(s)</span>
+          </div>
+        </article>
+
+        <article className="detail-card">
+          <div className="detail-card-topline">
+            <span className="metric-label">Billing lifecycle</span>
+            <span className={`tone-pill tone-${billingTone}`}>{currentSummary.billing_status ?? "Unlinked"}</span>
+          </div>
+          <strong>{currentPlanLabel}</strong>
+          <p>The dashboard mirrors Stripe state after webhook confirmation, so commercial state stays auditable and centralized.</p>
+          <div className="detail-card-meta">
+            <span>{currentSummary.billing_current_period_end ? formatDateTime(currentSummary.billing_current_period_end) : "No period end"}</span>
+            <span>{currentSummary.stripe_subscription_id ?? "No subscription"}</span>
+          </div>
+        </article>
+      </section>
+
       <div className="page-grid compact">
         <section className="panel page-panel">
           <div className="panel-header">
@@ -138,7 +219,9 @@ export function Billing() {
             </div>
             <div className="setting-row">
               <span>Status</span>
-              <strong>{currentSummary.billing_status ?? "-"}</strong>
+              <strong>
+                <span className={`tone-pill tone-${billingTone}`}>{currentSummary.billing_status ?? "Unlinked"}</span>
+              </strong>
             </div>
             <div className="setting-row">
               <span>Plan</span>
@@ -175,18 +258,23 @@ export function Billing() {
                 One-time payment
               </button>
             </div>
-            <label className="auth-field slim">
-              <span>Stripe price id</span>
-              <input onChange={(event) => setPriceId(event.target.value)} type="text" value={priceId} />
-            </label>
-            <label className="auth-field slim">
-              <span>Plan code</span>
-              <input onChange={(event) => setPlanCode(event.target.value)} placeholder="starter" type="text" value={planCode} />
-            </label>
+            <div className="field-grid">
+              <label className="auth-field slim">
+                <span>Stripe price id</span>
+                <input onChange={(event) => setPriceId(event.target.value)} type="text" value={priceId} />
+              </label>
+              <label className="auth-field slim">
+                <span>Plan code</span>
+                <input onChange={(event) => setPlanCode(event.target.value)} placeholder="starter" type="text" value={planCode} />
+              </label>
+            </div>
             <label className="auth-field slim">
               <span>Quantity</span>
               <input inputMode="numeric" onChange={(event) => setQuantity(event.target.value)} type="text" value={quantity} />
             </label>
+            <p className="helper-note">
+              Hosted Checkout is the recommended commercial path. The local summary updates after the Stripe webhook lands in the backend.
+            </p>
             <button
               className="primary-button"
               disabled={loading || submitting || !currentSummary.checkout_ready}
@@ -208,8 +296,15 @@ export function Billing() {
           <div className="stack">
             <div className="setting-row">
               <span>Portal ready</span>
-              <strong>{currentSummary.portal_ready ? "Ready" : "Waiting for Stripe customer"}</strong>
+              <strong>
+                <span className={`tone-pill tone-${currentSummary.portal_ready ? "positive" : "warning"}`}>
+                  {currentSummary.portal_ready ? "Ready" : "Waiting for Stripe customer"}
+                </span>
+              </strong>
             </div>
+            <p className="helper-note">
+              The Billing Portal only makes sense after a Stripe customer exists and the commercial record is linked.
+            </p>
             <button
               className="ghost-button"
               disabled={loading || submitting || !currentSummary.portal_ready}
@@ -232,22 +327,42 @@ export function Billing() {
           {error ? <p className="auth-error">{error}</p> : null}
           {success ? <p className="auth-success">{success}</p> : null}
 
-          <div className="stack">
-            <div className="setting-row">
-              <span>Checkout API</span>
+          <div className="endpoint-grid">
+            <article className="endpoint-card">
+              <span className="metric-label">Checkout API</span>
               <strong>/api/v1/billing/checkout-session</strong>
-            </div>
-            <div className="setting-row">
-              <span>Portal API</span>
+              <p>Creates the hosted Stripe Checkout session used by the commercial flow.</p>
+            </article>
+            <article className="endpoint-card">
+              <span className="metric-label">Portal API</span>
               <strong>/api/v1/billing/portal-session</strong>
-            </div>
-            <div className="setting-row">
-              <span>Webhook sync</span>
+              <p>Opens the customer-facing Stripe portal once a billing identity exists.</p>
+            </article>
+            <article className="endpoint-card">
+              <span className="metric-label">Webhook sync</span>
               <strong>/api/v1/billing/webhook</strong>
-            </div>
+              <p>Pushes Stripe lifecycle changes back into the dashboard billing summary.</p>
+            </article>
           </div>
         </section>
       </div>
     </div>
   );
+}
+
+function getBillingTone(status: string | null): "neutral" | "positive" | "negative" | "accent" | "warning" {
+  const normalizedStatus = status?.toLowerCase() ?? "";
+  if (!normalizedStatus) {
+    return "neutral";
+  }
+  if (normalizedStatus.includes("active") || normalizedStatus.includes("paid") || normalizedStatus.includes("trial")) {
+    return "positive";
+  }
+  if (normalizedStatus.includes("past_due") || normalizedStatus.includes("incomplete") || normalizedStatus.includes("unpaid")) {
+    return "warning";
+  }
+  if (normalizedStatus.includes("canceled") || normalizedStatus.includes("failed")) {
+    return "negative";
+  }
+  return "accent";
 }

@@ -63,30 +63,45 @@ export function AppShell({
           </div>
 
           <div className="topbar-actions">
+            <div className="topbar-system">
+              <div className="topbar-status-card">
+                <span className={`status-indicator ${apiStatus === "online" ? "online" : "offline"}`}>
+                  {apiStatus === "online" ? "API online" : "API degraded"}
+                </span>
+                <small>{generatedAt ? `Snapshot ${formatDateTime(generatedAt)}` : "Waiting for snapshot"}</small>
+              </div>
+              <div className="topbar-mode-card">
+                <span className="metric-label">Execution</span>
+                <ModeBadge mode={mode} />
+              </div>
+            </div>
+
             <div className="account-chip">
-              <span>{userLabel}</span>
+              <span className="account-avatar">{getInitials(userLabel)}</span>
+              <div className="account-copy">
+                <strong>{userLabel}</strong>
+                <small>Authenticated operator</small>
+              </div>
               <button className="ghost-button" onClick={onSignOut} type="button">
                 Sign out
               </button>
             </div>
-            <div className="topbar-status">
-              <span className={`status-indicator ${apiStatus === "online" ? "online" : "offline"}`}>
-                {apiStatus === "online" ? "API online" : "API degraded"}
-              </span>
-              <small>{formatDateTime(generatedAt)}</small>
-            </div>
-            <ModeBadge mode={mode} />
           </div>
         </header>
 
         <section className="header-band">
           <div className="header-band-copy">
-            <span className="eyebrow">Simulation Layer</span>
-            <h2>Real market data in a cleaner admin control room.</h2>
+            <span className="eyebrow">Control Surface</span>
+            <h2>Research, validation, and paper execution in one operating layer.</h2>
             <p>
-              Review market structure, model output, backtests, and simulated execution from one shell without the old
-              dark research-terminal look.
+              Keep the market tape, model evidence, runtime state, and commercial flows aligned in a single dashboard
+              built for operator clarity.
             </p>
+            <div className="hero-chip-row">
+              <span className="hero-chip">Market intelligence</span>
+              <span className="hero-chip">Paper execution</span>
+              <span className="hero-chip">Commercial controls</span>
+            </div>
           </div>
 
           <div className="header-band-meta">

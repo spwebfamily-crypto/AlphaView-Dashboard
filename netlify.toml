@@ -1,0 +1,29 @@
+[build]
+  base = "frontend"
+  publish = "dist"
+  command = """
+    if [ -z "$NETLIFY_API_ORIGIN" ]; then
+      echo "NETLIFY_API_ORIGIN is required to proxy /api requests to the FastAPI backend."
+      exit 1
+    fi
+
+    NETLIFY_API_ORIGIN_CLEAN="${NETLIFY_API_ORIGIN%/}"
+    sed -i "s|NETLIFY_API_ORIGIN_PLACEHOLDER|${NETLIFY_API_ORIGIN_CLEAN}|g" ../netlify.toml
+    npm run build
+  """
+
+[build.environment]
+  NODE_VERSION = "20"
+  VITE_API_BASE_URL = "/api/v1"
+  VITE_APP_MODE = "PAPER"
+
+[[redirects]]
+  from = "/api/*"
+  to = "NETLIFY_API_ORIGIN_PLACEHOLDER/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

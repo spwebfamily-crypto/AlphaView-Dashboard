@@ -28,43 +28,71 @@ const navItems: Array<{ key: PageKey; label: string; hint: string; marker: strin
   { key: "settings", label: "Settings", hint: "Runtime and provider status", marker: "ST" },
 ];
 
+const navSections: Array<{ label: string; items: typeof navItems }> = [
+  {
+    label: "Market stack",
+    items: navItems.filter((item) =>
+      ["overview", "signals", "positions", "trades", "backtests", "models"].includes(item.key),
+    ),
+  },
+  {
+    label: "Platform stack",
+    items: navItems.filter((item) => ["logs", "account", "billing", "settings"].includes(item.key)),
+  },
+];
+
 export function Sidebar({ activePage, onSelect }: SidebarProps) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="sidebar-logo">A</div>
-        <div>
-          <span className="sidebar-label">AlphaView OS</span>
-          <h2>Admin Desk</h2>
+      <div className="sidebar-brand-panel">
+        <div className="sidebar-brand">
+          <div className="sidebar-logo-wrap">
+            <div className="sidebar-logo">AV</div>
+            <span className="sidebar-logo-beam" />
+          </div>
+          <div className="sidebar-brand-copy">
+            <span className="sidebar-label">AlphaView Command</span>
+            <h2>Operator Grid</h2>
+            <p>Research, paper execution, and commercial controls in one European equities surface.</p>
+          </div>
+        </div>
+
+        <div className="sidebar-status-card">
+          <span className="metric-label">Operating posture</span>
+          <strong>PAPER by default</strong>
+          <small>Real market inputs, local execution, and no live-return claims in the interface.</small>
         </div>
       </div>
 
-      <p className="sidebar-copy">
-        Notus-style control surface for market research, signals, and simulation oriented to European equities.
-      </p>
-
-      <nav className="sidebar-nav" aria-label="Primary">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            className={`nav-item ${activePage === item.key ? "active" : ""}`}
-            onClick={() => onSelect(item.key)}
-            type="button"
-          >
-            <span className="nav-icon">{item.marker}</span>
-            <span className="nav-copy">
-              <strong>{item.label}</strong>
-              <small>{item.hint}</small>
-            </span>
-          </button>
+      <div className="sidebar-sections">
+        {navSections.map((section) => (
+          <div className="nav-section" key={section.label}>
+            <span className="sidebar-section-label">{section.label}</span>
+            <nav className="sidebar-nav" aria-label={section.label}>
+              {section.items.map((item) => (
+                <button
+                  key={item.key}
+                  className={`nav-item ${activePage === item.key ? "active" : ""}`}
+                  onClick={() => onSelect(item.key)}
+                  type="button"
+                >
+                  <span className="nav-icon">{item.marker}</span>
+                  <span className="nav-copy">
+                    <strong>{item.label}</strong>
+                    <small>{item.hint}</small>
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
         ))}
-      </nav>
+      </div>
 
       <div className="sidebar-note">
-        <span className="eyebrow">Environment</span>
+        <span className="eyebrow">Protocol</span>
         <p>
-          Simulation only. Historical and status data are real, but order routing stays local and no broker claims are
-          made by the interface.
+          Treat the dashboard as a research and paper-trading platform. Billing and payout controls are real, but
+          market claims and execution remain bounded by provider and simulation rules.
         </p>
       </div>
     </aside>

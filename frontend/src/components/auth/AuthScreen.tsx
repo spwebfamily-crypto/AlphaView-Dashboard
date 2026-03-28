@@ -100,142 +100,173 @@ export function AuthScreen({ onAuthenticated, initialError }: AuthScreenProps) {
 
   return (
     <div className="auth-shell">
-      <section className="auth-card">
-        <div className="auth-copy">
-          <span className="eyebrow">Restricted Access</span>
-          <h1>AlphaView research desk</h1>
-          <p>
-            Register a real account, confirm the code sent to your email, and only then enter the dashboard.
-          </p>
+      <section className="auth-card auth-card-shell">
+        <div className="auth-stage">
+          <div className="auth-copy">
+            <span className="eyebrow">Restricted Access</span>
+            <h1>AlphaView command grid</h1>
+            <p>
+              Enter through a verified account and move from research to paper execution inside a controlled operating
+              surface.
+            </p>
+          </div>
+
+          <div className="auth-stage-grid">
+            <article className="auth-stage-card">
+              <span className="metric-label">Research</span>
+              <strong>Provider-backed market context</strong>
+              <p>Charts, signals, backtests, and model state stay visible in the same workflow.</p>
+            </article>
+            <article className="auth-stage-card">
+              <span className="metric-label">Safety</span>
+              <strong>Paper execution first</strong>
+              <p>Registration and verification are real; default trade routing still remains simulation-only.</p>
+            </article>
+            <article className="auth-stage-card">
+              <span className="metric-label">Identity</span>
+              <strong>Email-gated access</strong>
+              <p>Each operator account needs confirmation before the dashboard and payout controls unlock.</p>
+            </article>
+          </div>
+
+          <div className="auth-stage-note">
+            <span className="metric-label">Protocol</span>
+            <p>
+              This platform is positioned as a research and paper-trading product. Backtests and signals are decision
+              support, not promises of future returns.
+            </p>
+          </div>
         </div>
 
-        <div className="auth-mode-switch" role="tablist" aria-label="Authentication mode">
-          <button
-            className={`auth-mode-button ${mode === "login" ? "active" : ""}`}
-            onClick={() => activateMode("login")}
-            type="button"
-          >
-            Login
-          </button>
-          <button
-            className={`auth-mode-button ${mode === "register" ? "active" : ""}`}
-            onClick={() => activateMode("register")}
-            type="button"
-          >
-            Create account
-          </button>
-        </div>
+        <div className="auth-panel">
+          <div className="auth-mode-switch" role="tablist" aria-label="Authentication mode">
+            <button
+              className={`auth-mode-button ${mode === "login" ? "active" : ""}`}
+              onClick={() => activateMode("login")}
+              type="button"
+            >
+              Login
+            </button>
+            <button
+              className={`auth-mode-button ${mode === "register" ? "active" : ""}`}
+              onClick={() => activateMode("register")}
+              type="button"
+            >
+              Create account
+            </button>
+          </div>
 
-        {view === "credentials" ? (
-          <form className="auth-form" onSubmit={handleCredentialSubmit}>
-            {mode === "register" ? (
+          {view === "credentials" ? (
+            <form className="auth-form" onSubmit={handleCredentialSubmit}>
+              {mode === "register" ? (
+                <label className="auth-field">
+                  <span>Full name</span>
+                  <input
+                    autoComplete="name"
+                    onChange={(event) => setFullName(event.target.value)}
+                    placeholder="Rodrigo Silva"
+                    type="text"
+                    value={fullName}
+                  />
+                </label>
+              ) : null}
+
               <label className="auth-field">
-                <span>Full name</span>
+                <span>Email</span>
                 <input
-                  autoComplete="name"
-                  onChange={(event) => setFullName(event.target.value)}
-                  placeholder="Rodrigo Silva"
-                  type="text"
-                  value={fullName}
+                  autoComplete="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@alphaview.com"
+                  type="email"
+                  value={email}
                 />
               </label>
-            ) : null}
 
-            <label className="auth-field">
-              <span>Email</span>
-              <input
-                autoComplete="email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@alphaview.com"
-                type="email"
-                value={email}
-              />
-            </label>
-
-            <label className="auth-field">
-              <span>Password</span>
-              <input
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Minimum 10 chars, upper/lower/number/symbol"
-                type="password"
-                value={password}
-              />
-            </label>
-
-            {mode === "register" ? (
               <label className="auth-field">
-                <span>Confirm password</span>
+                <span>Password</span>
                 <input
-                  autoComplete="new-password"
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  placeholder="Repeat your password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Minimum 10 chars, upper/lower/number/symbol"
                   type="password"
-                  value={confirmPassword}
+                  value={password}
                 />
               </label>
-            ) : null}
 
-            {error ? <p className="auth-error">{error}</p> : null}
-            {success ? <p className="auth-success">{success}</p> : null}
+              {mode === "register" ? (
+                <label className="auth-field">
+                  <span>Confirm password</span>
+                  <input
+                    autoComplete="new-password"
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Repeat your password"
+                    type="password"
+                    value={confirmPassword}
+                  />
+                </label>
+              ) : null}
 
-            <button className="auth-submit" disabled={submitting} type="submit">
-              {submitting ? "Please wait..." : mode === "login" ? "Enter dashboard" : "Create secure account"}
-            </button>
-          </form>
-        ) : (
-          <form className="auth-form" onSubmit={handleVerifySubmit}>
-            <label className="auth-field">
-              <span>Email</span>
-              <input readOnly type="email" value={verificationEmail} />
-            </label>
+              {error ? <p className="auth-error">{error}</p> : null}
+              {success ? <p className="auth-success">{success}</p> : null}
 
-            <label className="auth-field">
-              <span>Confirmation code</span>
-              <input
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                onChange={(event) => setVerificationCode(event.target.value)}
-                placeholder="6-digit code"
-                type="text"
-                value={verificationCode}
-              />
-            </label>
-
-            {error ? <p className="auth-error">{error}</p> : null}
-            {success ? <p className="auth-success">{success}</p> : null}
-
-            <button className="auth-submit" disabled={submitting} type="submit">
-              {submitting ? "Verifying..." : "Confirm email"}
-            </button>
-
-            <div className="action-row">
-              <button className="ghost-button" disabled={submitting} onClick={handleResendCode} type="button">
-                Resend code
+              <button className="auth-submit" disabled={submitting} type="submit">
+                {submitting ? "Please wait..." : mode === "login" ? "Enter dashboard" : "Create secure account"}
               </button>
-              <button
-                className="ghost-button"
-                disabled={submitting}
-                onClick={() => {
-                  setView("credentials");
-                  setMode("login");
-                  setError(null);
-                  setSuccess(null);
-                }}
-                type="button"
-              >
-                Back to login
-              </button>
-            </div>
-          </form>
-        )}
+            </form>
+          ) : (
+            <form className="auth-form" onSubmit={handleVerifySubmit}>
+              <label className="auth-field">
+                <span>Email</span>
+                <input readOnly type="email" value={verificationEmail} />
+              </label>
 
-        <div className="auth-note">
-          <strong>Important</strong>
-          <p>
-            PAPER trading remains the default. Registration now requires email confirmation, and payout flows still
-            depend on a completed Stripe Connect onboarding.
-          </p>
+              <label className="auth-field">
+                <span>Confirmation code</span>
+                <input
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  onChange={(event) => setVerificationCode(event.target.value)}
+                  placeholder="6-digit code"
+                  type="text"
+                  value={verificationCode}
+                />
+              </label>
+
+              {error ? <p className="auth-error">{error}</p> : null}
+              {success ? <p className="auth-success">{success}</p> : null}
+
+              <button className="auth-submit" disabled={submitting} type="submit">
+                {submitting ? "Verifying..." : "Confirm email"}
+              </button>
+
+              <div className="action-row">
+                <button className="ghost-button" disabled={submitting} onClick={handleResendCode} type="button">
+                  Resend code
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={submitting}
+                  onClick={() => {
+                    setView("credentials");
+                    setMode("login");
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  type="button"
+                >
+                  Back to login
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="auth-note">
+            <strong>Important</strong>
+            <p>
+              PAPER trading remains the default. Registration now requires email confirmation, and payout flows still
+              depend on a completed Stripe Connect onboarding.
+            </p>
+          </div>
         </div>
       </section>
     </div>
