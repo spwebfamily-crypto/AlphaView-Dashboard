@@ -1,6 +1,6 @@
-# Deploy do Backend no Render
+﻿# Deploy do Backend no Render
 
-Este projeto já está preparado para subir o backend FastAPI no Render com Docker através de [render.yaml](C:/Users/Rodrigo🐐/OneDrive/Desktop/AlphaView-Dashboard/render.yaml).
+Este projeto jÃ¡ estÃ¡ preparado para subir o backend FastAPI no Render com Docker atravÃ©s de [render.yaml](C:/Users/RodrigoðŸ/OneDrive/Desktop/AlphaView-Dashboard/render.yaml).
 
 ## O que foi preparado
 
@@ -11,45 +11,44 @@ Este projeto já está preparado para subir o backend FastAPI no Render com Dock
   - `healthCheckPath` em `/api/v1/health`
   - `EXECUTION_MODE=PAPER`
   - `ENABLE_LIVE_TRADING=false`
-  - `EMAIL_DELIVERY_MODE=resend` para envio real sem depender de SMTP bloqueado no plano gratuito
-- `Dockerfile` na raiz como fallback para o Render quando o serviço Docker é criado fora do fluxo de Blueprint
-- `infra/backend.Dockerfile` atualizado para respeitar a variável `PORT`
-- [backend/.env.render.example](C:/Users/Rodrigo🐐/OneDrive/Desktop/AlphaView-Dashboard/backend/.env.render.example) com os overrides mínimos
+- `Dockerfile` na raiz como fallback para o Render quando o serviÃ§o Docker Ã© criado fora do fluxo de Blueprint
+- `infra/backend.Dockerfile` atualizado para respeitar a variÃ¡vel `PORT`
+- [backend/.env.render.example](C:/Users/RodrigoðŸ/OneDrive/Desktop/AlphaView-Dashboard/backend/.env.render.example) com os overrides mÃ­nimos
 
 ## Como criar o backend no Render
 
-1. Faça push do repositório para GitHub.
+1. FaÃ§a push do repositÃ³rio para GitHub.
 2. No Render, escolha `New > Blueprint`.
-3. Ligue o repositório e selecione o ficheiro `render.yaml` da raiz.
-4. O Blueprint já fica pré-configurado com o frontend:
+3. Ligue o repositÃ³rio e selecione o ficheiro `render.yaml` da raiz.
+4. O Blueprint jÃ¡ fica prÃ©-configurado com o frontend:
 
 ```env
 FRONTEND_BASE_URL=https://alphaview.netlify.app
 BACKEND_CORS_ORIGINS=https://alphaview.netlify.app
 ```
 
-Se o domínio do frontend mudar no futuro, ajuste esses dois valores no Render.
+Se o domÃ­nio do frontend mudar no futuro, ajuste esses dois valores no Render.
 
-5. Confirme a criação do serviço `alphaview-backend` e da base de dados `alphaview-db`.
+5. Confirme a criaÃ§Ã£o do serviÃ§o `alphaview-backend` e da base de dados `alphaview-db`.
 
-Se você já tiver criado um `Web Service` normal em vez de `Blueprint`, o repositório agora também funciona nesse modo porque o Render encontrará o `Dockerfile` na raiz por defeito.
+Se vocÃª jÃ¡ tiver criado um `Web Service` normal em vez de `Blueprint`, o repositÃ³rio agora tambÃ©m funciona nesse modo porque o Render encontrarÃ¡ o `Dockerfile` na raiz por defeito.
 
 ## O que o Render vai criar
 
-- um web service público para o FastAPI
+- um web service pÃºblico para o FastAPI
 - uma base de dados Postgres gratuita
 
-O serviço usa `Docker`, faz health check em:
+O serviÃ§o usa `Docker`, faz health check em:
 
 ```text
 /api/v1/health
 ```
 
-e liga ao Postgres com a `connectionString` privada do próprio Render.
+e liga ao Postgres com a `connectionString` privada do prÃ³prio Render.
 
-## Variáveis importantes
+## VariÃ¡veis importantes
 
-Estas variáveis já ficam definidas pelo `render.yaml`:
+Estas variÃ¡veis jÃ¡ ficam definidas pelo `render.yaml`:
 
 ```env
 APP_ENV=production
@@ -57,8 +56,6 @@ EXECUTION_MODE=PAPER
 ENABLE_LIVE_TRADING=false
 AUTH_COOKIE_SECURE=true
 ALLOW_PUBLIC_REGISTRATION=true
-EMAIL_DELIVERY_MODE=resend
-EMAIL_FROM_NAME=AlphaView Dashboard
 PORT=10000
 ```
 
@@ -67,18 +64,11 @@ Estas precisam ser definidas no Render:
 ```env
 FRONTEND_BASE_URL=https://alphaview.netlify.app
 BACKEND_CORS_ORIGINS=https://alphaview.netlify.app
-RESEND_API_KEY=re_xxxxxxxxx
-EMAIL_FROM_EMAIL=no-reply@yourdomain.com
 ```
 
-Variáveis opcionais que você pode acrescentar depois, se precisar:
+VariÃ¡veis opcionais que vocÃª pode acrescentar depois, se precisar:
 
 ```env
-RESEND_API_BASE=https://api.resend.com
-EMAIL_SMTP_HOST=
-EMAIL_SMTP_PORT=587
-EMAIL_SMTP_USERNAME=
-EMAIL_SMTP_PASSWORD=
 POLYGON_API_KEY=
 EODHD_API_TOKEN=
 STRIPE_PUBLISHABLE_KEY=
@@ -88,7 +78,7 @@ STRIPE_WEBHOOK_SECRET=
 
 ## Como ligar com a Netlify
 
-Depois do primeiro deploy do backend, copie a URL pública do Render, por exemplo:
+Depois do primeiro deploy do backend, copie a URL pÃºblica do Render, por exemplo:
 
 ```text
 https://alphaview-backend.onrender.com
@@ -107,20 +97,14 @@ NETLIFY_API_ORIGIN=https://alphaview-backend.onrender.com
 3. Abra o frontend na Netlify
 4. Teste o proxy `/api/v1/health`
 
-Para que o envio funcione de verdade:
 
-1. crie uma conta no Resend
-2. verifique o seu domínio de envio
-3. gere um `RESEND_API_KEY`
-4. defina `EMAIL_FROM_EMAIL` com um endereço do domínio verificado
+## LimitaÃ§Ãµes conhecidas
 
-## Limitações conhecidas
+- O plano gratuito do Render faz o web service entrar em idle apÃ³s inatividade.
+- O Postgres gratuito expira `30 dias` apÃ³s a criaÃ§Ã£o.
+- O arranque da aplicaÃ§Ã£o ainda cria o schema de forma bootstrap-style; nÃ£o hÃ¡ Alembic neste milestone.
 
-- O plano gratuito do Render faz o web service entrar em idle após inatividade.
-- O Postgres gratuito expira `30 dias` após a criação.
-- O plano gratuito do Render bloqueia SMTP nas portas `25`, `465` e `587`; por isso o Blueprint usa Resend por API HTTP.
-- O arranque da aplicação ainda cria o schema de forma bootstrap-style; não há Alembic neste milestone.
+## PrÃ³ximo passo recomendado
 
-## Próximo passo recomendado
+Adicionar um worker/cron no Render para backfill, feature materialization e retraining, em vez de deixar esses processos apenas para execuÃ§Ã£o manual.
 
-Adicionar um worker/cron no Render para backfill, feature materialization e retraining, em vez de deixar esses processos apenas para execução manual.

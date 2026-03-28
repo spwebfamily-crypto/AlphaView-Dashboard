@@ -12,9 +12,6 @@ from app.schemas.auth import (
     LoginRequest,
     MessageResponse,
     RegisterRequest,
-    RegisterResponse,
-    ResendVerificationRequest,
-    VerifyEmailRequest,
 )
 from app.services.auth_service import (
     ACCESS_COOKIE_NAME,
@@ -23,11 +20,9 @@ from app.services.auth_service import (
     AuthSessionBundle,
     authenticate_user,
     create_user_session,
-    get_unverified_user_by_email,
     register_user,
     revoke_session_by_refresh_token,
     rotate_user_session,
-    verify_email_code,
 )
 
 router = APIRouter(prefix="/auth")
@@ -95,45 +90,6 @@ def register(
 
     _set_auth_cookies(response, settings, bundle)
     return _serialize_auth_response(bundle, settings)
-
-
-@router.post("/verify-email", response_model=AuthSessionResponse)
-def verify_email(
-    payload: VerifyEmailRequest,
-    request: Request,
-    response: Response,
-    db_session: Session = Depends(get_db_session),
-    settings: Settings = Depends(get_settings),
-) -> AuthSessionResponse:
-    try:
-        user = verify_email_code(db_session, email=payload.email, code=payload.code)
-        bundle = create_user_session(
-            db_session,
-            settings,
-            user=user,
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent"),
-        )
-    except AuthServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
-    _set_auth_cookies(response, settings, bundle)
-    return _serialize_auth_response(bundle, settings)
-
-
-@router.post("/resend-verification", response_model=RegisterResponse)
-def resend_verification(
-    payload: ResendVerificationRequest,
-    db_session: Session = Depends(get_db_session),
-    settings: Settings = Depends(get_settings),
-) -> RegisterResponse:
-    try:
-        get_unverified_user_by_email(db_session, payload.email)
-    except AuthServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
-    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email verification is disabled for this deployment.")
-
 
 @router.post("/login", response_model=AuthSessionResponse)
 def login(

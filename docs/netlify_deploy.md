@@ -36,9 +36,6 @@ ENABLE_LIVE_TRADING=false
 FRONTEND_BASE_URL=https://alphaview.netlify.app
 BACKEND_CORS_ORIGINS=https://alphaview.netlify.app
 AUTH_COOKIE_SECURE=true
-EMAIL_DELIVERY_MODE=resend
-RESEND_API_KEY=re_xxxxxxxxx
-EMAIL_FROM_EMAIL=no-reply@yourdomain.com
 DATABASE_URL=postgresql+psycopg://user:password@host:5432/alphaview
 ```
 

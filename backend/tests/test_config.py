@@ -107,9 +107,5 @@ def test_render_blueprint_wires_backend_service_and_database() -> None:
     assert "dockerfilePath: ./infra/backend.Dockerfile" in render_text
     assert "healthCheckPath: /api/v1/health" in render_text
     assert "property: connectionString" in render_text
-    assert "EMAIL_DELIVERY_MODE" in render_text
-    assert "value: resend" in render_text
-    assert "RESEND_API_KEY" in render_text
-    assert "EMAIL_FROM_EMAIL" in render_text
     assert "name: alphaview-db" in render_text
     assert "plan: free" in render_text

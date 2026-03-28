@@ -158,7 +158,7 @@ export function Account({ user }: AccountProps) {
           {
             label: "Account status",
             value: "Ready",
-            note: user.email_verified_at ? `Activated ${formatDateTime(user.email_verified_at)}` : "Direct sign-in enabled",
+            note: "Direct sign-in enabled",
             tone: identityTone,
           },
           {

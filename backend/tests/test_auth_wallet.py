@@ -13,7 +13,7 @@ def test_protected_routes_require_authentication(client) -> None:
     assert response.status_code == 401
 
 
-def test_register_creates_verified_session_and_allows_direct_login(
+def test_register_creates_session_and_allows_direct_login(
     client,
     db_session: Session,
 ) -> None:
@@ -30,8 +30,6 @@ def test_register_creates_verified_session_and_allows_direct_login(
 
     user = db_session.scalar(select(User).where(User.email == "pending@example.com"))
     assert user is not None
-    assert user.email_verified_at is not None
-    assert user.email_verification_code_hash is None
 
     login_response = client.post(
         "/api/v1/auth/login",
@@ -39,35 +37,6 @@ def test_register_creates_verified_session_and_allows_direct_login(
     )
     assert login_response.status_code == 200
     assert login_response.json()["user"]["email"] == "pending@example.com"
-
-    db_session.refresh(user)
-    assert user.email_verified_at is not None
-    assert user.email_verification_code_hash is None
-
-
-def test_verification_endpoints_are_disabled(client) -> None:
-    register_response = client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": "resend@example.com",
-            "password": "Password123!",
-            "full_name": "Resend User",
-        },
-    )
-    assert register_response.status_code == 201
-    resend_response = client.post(
-        "/api/v1/auth/resend-verification",
-        json={"email": "resend@example.com"},
-    )
-    assert resend_response.status_code == 409
-    assert resend_response.json()["detail"] == "Email verification is disabled for this deployment."
-
-    verify_response = client.post(
-        "/api/v1/auth/verify-email",
-        json={"email": "resend@example.com", "code": "123456"},
-    )
-    assert verify_response.status_code == 409
-    assert verify_response.json()["detail"] == "Email verification is disabled for this deployment. Sign in directly instead."
 
 
 def test_auth_session_can_refresh_and_logout(authenticated_client) -> None:

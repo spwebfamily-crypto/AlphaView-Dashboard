@@ -13,21 +13,13 @@
 
 - `POST /api/v1/auth/login`
 - Inputs: `email`, `password`
-- Authenticates the dashboard user directly without an email verification step
+- Authenticates the dashboard user directly
 
 - `POST /api/v1/auth/refresh`
 - Rotates the refresh session and renews the access cookie without exposing tokens to the frontend runtime
 
 - `POST /api/v1/auth/logout`
 - Revokes the stored session and clears auth cookies
-
-- `POST /api/v1/auth/verify-email`
-- Inputs: `email`, `code`
-- Deprecated in the current deployment flow because email verification is disabled
-
-- `POST /api/v1/auth/resend-verification`
-- Inputs: `email`
-- Deprecated in the current deployment flow because email verification is disabled
 
 - `GET /api/v1/auth/me`
 - Returns the current authenticated user profile used by the dashboard shell

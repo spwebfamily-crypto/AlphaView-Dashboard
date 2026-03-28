@@ -74,7 +74,6 @@ def register_user(
         password_salt=password_salt,
         role="member",
         currency=settings.withdrawals_currency,
-        email_verified_at=utc_now(),
     )
     db_session.add(user)
     db_session.commit()
@@ -89,32 +88,6 @@ def authenticate_user(db_session: Session, email: str, password: str) -> User:
     if not user.is_active:
         raise AuthServiceError("This account is disabled.", status_code=403)
     return user
-
-
-def issue_email_verification_code(
-    db_session: Session,
-    settings: Settings,
-    *,
-    user: User,
-    force: bool = False,
-) -> None:
-    _ = (db_session, settings, user, force)
-    raise AuthServiceError("Email verification is disabled for this deployment.", status_code=409)
-
-
-def verify_email_code(
-    db_session: Session,
-    *,
-    email: str,
-    code: str,
-) -> User:
-    _ = (db_session, email, code)
-    raise AuthServiceError("Email verification is disabled for this deployment. Sign in directly instead.", status_code=409)
-
-
-def get_unverified_user_by_email(db_session: Session, email: str) -> User:
-    _ = (db_session, email)
-    raise AuthServiceError("Email verification is disabled for this deployment.", status_code=409)
 
 
 def create_user_session(

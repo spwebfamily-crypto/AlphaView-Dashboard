@@ -9,7 +9,7 @@ from app.core.config import EmailDeliveryMode, Settings
 from app.services.email_service import SmtpEmailService
 
 
-def test_verification_email_message_includes_html_and_inline_logo() -> None:
+def test_email_message_includes_html_and_inline_logo() -> None:
     settings = Settings(
         _env_file=None,
         database_url="sqlite+pysqlite:///:memory:",
@@ -20,19 +20,14 @@ def test_verification_email_message_includes_html_and_inline_logo() -> None:
         email_smtp_password="app-password",
         email_from_email="mailer@example.com",
         email_from_name="AlphaView SMTP System",
-        frontend_base_url="https://alphaview.example.com",
     )
     service = SmtpEmailService(settings)
-    text_body, html_body = service._build_verification_email_bodies(
-        recipient_email="user@example.com",
-        recipient_name="Trader Test",
-        code="246810",
-        ttl_minutes=10,
-    )
+    text_body = "AlphaView status update"
+    html_body = "<html><body><img src=\"cid:{{LOGO_CID}}\" alt=\"Logo\" /><p>Status update</p></body></html>"
 
     message = service._build_email_message(
         recipient_email="user@example.com",
-        subject="AlphaView confirmation code",
+        subject="AlphaView update",
         text_body=text_body,
         html_body=html_body,
     )
@@ -42,10 +37,9 @@ def test_verification_email_message_includes_html_and_inline_logo() -> None:
 
     assert plain_part is not None
     assert html_part is not None
-    assert "246810" in plain_part.get_content()
+    assert "AlphaView status update" in plain_part.get_content()
     html_content = html_part.get_content()
-    assert "AlphaView secure email verification" in html_content
-    assert "Open AlphaView" in html_content
+    assert "Status update" in html_content
     assert "cid:" in html_content
     assert "{{LOGO_CID}}" not in html_content
 
@@ -54,29 +48,27 @@ def test_verification_email_message_includes_html_and_inline_logo() -> None:
     assert related_parts[0].get_content_type() == "image/svg+xml"
 
 
-def test_verification_email_can_be_logged_instead_of_sent(caplog: pytest.LogCaptureFixture) -> None:
+def test_email_can_be_logged_instead_of_sent(caplog: pytest.LogCaptureFixture) -> None:
     settings = Settings(
         _env_file=None,
         database_url="sqlite+pysqlite:///:memory:",
         email_delivery_mode=EmailDeliveryMode.LOG,
         email_from_email="mailer@example.com",
-        frontend_base_url="https://alphaview.example.com",
     )
     service = SmtpEmailService(settings)
 
     with caplog.at_level(logging.INFO):
-        service.send_verification_code(
+        service.send_email(
             recipient_email="user@example.com",
-            recipient_name="Trader Test",
-            code="135790",
-            ttl_minutes=10,
+            subject="AlphaView update",
+            text_body="Status update 135790",
         )
 
     assert "email_delivery_logged" in caplog.text
     assert any(getattr(record, "text_body", "").find("135790") >= 0 for record in caplog.records)
 
 
-def test_verification_email_can_be_sent_via_resend(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_email_can_be_sent_via_resend(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
 
     def fake_post(url: str, *, headers: dict[str, str], json: dict[str, object], timeout: int) -> httpx.Response:
@@ -95,14 +87,13 @@ def test_verification_email_can_be_sent_via_resend(monkeypatch: pytest.MonkeyPat
         resend_api_key="re_test_key",
         email_from_email="no-reply@example.com",
         email_from_name="AlphaView Dashboard",
-        frontend_base_url="https://alphaview.example.com",
     )
     service = SmtpEmailService(settings)
-    service.send_verification_code(
+    service.send_email(
         recipient_email="user@example.com",
-        recipient_name="Trader Test",
-        code="246810",
-        ttl_minutes=10,
+        subject="AlphaView update",
+        text_body="Status update 246810",
+        html_body="<html><body><p>Status update 246810</p></body></html>",
     )
 
     assert captured["url"] == "https://api.resend.com/emails"
@@ -114,7 +105,7 @@ def test_verification_email_can_be_sent_via_resend(monkeypatch: pytest.MonkeyPat
     assert isinstance(payload, dict)
     assert payload["from"] == "AlphaView Dashboard <no-reply@example.com>"
     assert payload["to"] == ["user@example.com"]
-    assert payload["subject"] == "AlphaView confirmation code"
+    assert payload["subject"] == "AlphaView update"
     assert "246810" in str(payload["text"])
     assert "246810" in str(payload["html"])
 
@@ -129,11 +120,10 @@ def test_resend_requires_api_key_and_from_email() -> None:
     service = SmtpEmailService(settings)
 
     with pytest.raises(Exception) as exc_info:
-        service.send_verification_code(
+        service.send_email(
             recipient_email="user@example.com",
-            recipient_name="Trader Test",
-            code="246810",
-            ttl_minutes=10,
+            subject="AlphaView update",
+            text_body="Status update",
         )
 
     assert "RESEND_API_KEY and EMAIL_FROM_EMAIL" in str(exc_info.value)

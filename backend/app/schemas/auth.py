@@ -22,7 +22,6 @@ class AuthUserResponse(BaseModel):
     stripe_connected_account_id: str | None
     stripe_onboarding_complete: bool
     stripe_transfers_enabled: bool
-    email_verified_at: datetime | None
     last_login_at: datetime | None
 
 
@@ -30,12 +29,6 @@ class AuthSessionResponse(BaseModel):
     user: AuthUserResponse
     access_token_expires_in_seconds: int
     refresh_token_expires_in_seconds: int
-
-
-class RegisterResponse(BaseModel):
-    message: str
-    email: str
-    verification_expires_in_seconds: int
 
 
 class RegisterRequest(BaseModel):
@@ -63,39 +56,6 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(min_length=5, max_length=255)
     password: str = Field(min_length=1, max_length=256)
-
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if not EMAIL_PATTERN.match(normalized):
-            raise ValueError("Invalid email address.")
-        return normalized
-
-
-class VerifyEmailRequest(BaseModel):
-    email: str = Field(min_length=5, max_length=255)
-    code: str = Field(min_length=4, max_length=12)
-
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if not EMAIL_PATTERN.match(normalized):
-            raise ValueError("Invalid email address.")
-        return normalized
-
-    @field_validator("code")
-    @classmethod
-    def normalize_code(cls, value: str) -> str:
-        normalized = value.strip().replace(" ", "")
-        if not normalized.isdigit():
-            raise ValueError("Verification code must contain digits only.")
-        return normalized
-
-
-class ResendVerificationRequest(BaseModel):
-    email: str = Field(min_length=5, max_length=255)
 
     @field_validator("email")
     @classmethod

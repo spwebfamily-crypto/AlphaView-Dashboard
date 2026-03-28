@@ -46,7 +46,6 @@ class SessionManager:
 
         existing_columns = {column["name"] for column in inspector.get_columns("users")}
         statements = []
-        added_email_verified_at = False
         if "password_hash" not in existing_columns:
             statements.append("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT ''")
         if "password_salt" not in existing_columns:
@@ -55,15 +54,6 @@ class SessionManager:
             statements.append("ALTER TABLE users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'member'")
         if "last_login_at" not in existing_columns:
             statements.append("ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP WITH TIME ZONE")
-        if "email_verified_at" not in existing_columns:
-            statements.append("ALTER TABLE users ADD COLUMN email_verified_at TIMESTAMP WITH TIME ZONE")
-            added_email_verified_at = True
-        if "email_verification_code_hash" not in existing_columns:
-            statements.append("ALTER TABLE users ADD COLUMN email_verification_code_hash VARCHAR(255)")
-        if "email_verification_expires_at" not in existing_columns:
-            statements.append("ALTER TABLE users ADD COLUMN email_verification_expires_at TIMESTAMP WITH TIME ZONE")
-        if "email_verification_sent_at" not in existing_columns:
-            statements.append("ALTER TABLE users ADD COLUMN email_verification_sent_at TIMESTAMP WITH TIME ZONE")
         if "currency" not in existing_columns:
             statements.append("ALTER TABLE users ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT 'usd'")
         if "withdrawable_balance_cents" not in existing_columns:
@@ -93,13 +83,6 @@ class SessionManager:
         with self.engine.begin() as connection:
             for statement in statements:
                 connection.execute(text(statement))
-            if added_email_verified_at:
-                connection.execute(
-                    text(
-                        "UPDATE users SET email_verified_at = COALESCE(last_login_at, created_at, NOW()) "
-                        "WHERE email_verified_at IS NULL"
-                    )
-                )
             connection.execute(
                 text(
                     "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_stripe_connected_account_id "

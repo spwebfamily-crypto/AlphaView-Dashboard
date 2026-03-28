@@ -9,7 +9,6 @@ export type AuthUser = {
   stripe_connected_account_id: string | null;
   stripe_onboarding_complete: boolean;
   stripe_transfers_enabled: boolean;
-  email_verified_at: string | null;
   last_login_at: string | null;
 };
 

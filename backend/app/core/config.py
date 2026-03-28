@@ -41,8 +41,6 @@ class Settings(BaseSettings):
     auth_access_token_ttl_minutes: int = 15
     auth_refresh_token_ttl_days: int = 7
     auth_cookie_secure: bool = False
-    auth_verification_code_ttl_minutes: int = 10
-    auth_verification_resend_cooldown_seconds: int = 60
     email_delivery_mode: EmailDeliveryMode = EmailDeliveryMode.SMTP
     resend_api_key: str | None = None
     resend_api_base: str = "https://api.resend.com"
