@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: alphaview-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./infra/backend.Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - backend/**
+        - infra/backend.Dockerfile
+        - examples/**
+        - ml/**
+        - reports/**
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alphaview-db
+          property: connectionString
+      - key: PROJECT_NAME
+        value: AlphaView Dashboard
+      - key: APP_VERSION
+        value: 0.1.0
+      - key: APP_ENV
+        value: production
+      - key: EXECUTION_MODE
+        value: PAPER
+      - key: ENABLE_LIVE_TRADING
+        value: "false"
+      - key: ALLOW_PUBLIC_REGISTRATION
+        value: "true"
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: EMAIL_DELIVERY_MODE
+        value: log
+      - key: FRONTEND_BASE_URL
+        value: https://alphaview.netlify.app
+      - key: BACKEND_CORS_ORIGINS
+        value: https://alphaview.netlify.app
+
+databases:
+  - name: alphaview-db
+    plan: free
+    databaseName: alphaview
+    user: alphaview

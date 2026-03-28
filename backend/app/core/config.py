@@ -20,6 +20,11 @@ class StripeConnectMode(StrEnum):
     V2 = "v2"
 
 
+class EmailDeliveryMode(StrEnum):
+    SMTP = "smtp"
+    LOG = "log"
+
+
 class Settings(BaseSettings):
     project_name: str = "AlphaView Dashboard"
     app_version: str = "0.1.0"
@@ -36,6 +41,7 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = False
     auth_verification_code_ttl_minutes: int = 10
     auth_verification_resend_cooldown_seconds: int = 60
+    email_delivery_mode: EmailDeliveryMode = EmailDeliveryMode.SMTP
     email_smtp_host: str | None = None
     email_smtp_port: int = 587
     email_smtp_username: str | None = None

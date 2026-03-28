@@ -9,7 +9,7 @@ from pathlib import Path
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
-from app.core.config import Settings
+from app.core.config import EmailDeliveryMode, Settings
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +87,17 @@ class SmtpEmailService:
         text_body: str,
         html_body: str | None = None,
     ) -> None:
+        if self.settings.email_delivery_mode == EmailDeliveryMode.LOG:
+            logger.info(
+                "email_delivery_logged",
+                extra={
+                    "recipient_email": recipient_email,
+                    "subject": subject,
+                    "text_body": text_body,
+                },
+            )
+            return
+
         if not self.enabled:
             raise EmailDeliveryError(
                 "Email delivery is not configured. Set Gmail-compatible SMTP credentials first.",

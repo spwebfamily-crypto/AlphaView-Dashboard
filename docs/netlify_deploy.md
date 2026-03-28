@@ -41,8 +41,8 @@ As mais importantes são:
 APP_ENV=production
 EXECUTION_MODE=PAPER
 ENABLE_LIVE_TRADING=false
-FRONTEND_BASE_URL=https://seu-site.netlify.app
-BACKEND_CORS_ORIGINS=https://seu-site.netlify.app
+FRONTEND_BASE_URL=https://alphaview.netlify.app
+BACKEND_CORS_ORIGINS=https://alphaview.netlify.app
 AUTH_COOKIE_SECURE=true
 DATABASE_URL=postgresql+psycopg://user:password@host:5432/alphaview
 ```
@@ -50,11 +50,11 @@ DATABASE_URL=postgresql+psycopg://user:password@host:5432/alphaview
 Se usar Stripe, alinhe também:
 
 ```env
-STRIPE_CONNECT_RETURN_URL=https://seu-site.netlify.app/?stripe=return
-STRIPE_CONNECT_REFRESH_URL=https://seu-site.netlify.app/?stripe=refresh
-STRIPE_CHECKOUT_SUCCESS_URL=https://seu-site.netlify.app/?billing=success
-STRIPE_CHECKOUT_CANCEL_URL=https://seu-site.netlify.app/?billing=cancel
-STRIPE_BILLING_PORTAL_RETURN_URL=https://seu-site.netlify.app/?billing=portal
+STRIPE_CONNECT_RETURN_URL=https://alphaview.netlify.app/?stripe=return
+STRIPE_CONNECT_REFRESH_URL=https://alphaview.netlify.app/?stripe=refresh
+STRIPE_CHECKOUT_SUCCESS_URL=https://alphaview.netlify.app/?billing=success
+STRIPE_CHECKOUT_CANCEL_URL=https://alphaview.netlify.app/?billing=cancel
+STRIPE_BILLING_PORTAL_RETURN_URL=https://alphaview.netlify.app/?billing=portal
 ```
 
 ## Verificação rápida após o deploy
@@ -64,7 +64,7 @@ STRIPE_BILLING_PORTAL_RETURN_URL=https://seu-site.netlify.app/?billing=portal
 3. Valide o proxy:
 
 ```text
-https://seu-site.netlify.app/api/v1/health
+https://alphaview.netlify.app/api/v1/health
 ```
 
 4. Teste login, refresh de sessão e páginas que dependem da API.

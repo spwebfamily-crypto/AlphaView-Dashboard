@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.core.config import Settings
+import logging
+
+import pytest
+
+from app.core.config import EmailDeliveryMode, Settings
 from app.services.email_service import SmtpEmailService
 
 
@@ -47,3 +51,25 @@ def test_verification_email_message_includes_html_and_inline_logo() -> None:
     related_parts = [part for part in message.walk() if part.get_content_maintype() == "image"]
     assert related_parts
     assert related_parts[0].get_content_type() == "image/svg+xml"
+
+
+def test_verification_email_can_be_logged_instead_of_sent(caplog: pytest.LogCaptureFixture) -> None:
+    settings = Settings(
+        _env_file=None,
+        database_url="sqlite+pysqlite:///:memory:",
+        email_delivery_mode=EmailDeliveryMode.LOG,
+        email_from_email="mailer@example.com",
+        frontend_base_url="https://alphaview.example.com",
+    )
+    service = SmtpEmailService(settings)
+
+    with caplog.at_level(logging.INFO):
+        service.send_verification_code(
+            recipient_email="user@example.com",
+            recipient_name="Trader Test",
+            code="135790",
+            ttl_minutes=10,
+        )
+
+    assert "email_delivery_logged" in caplog.text
+    assert any(getattr(record, "text_body", "").find("135790") >= 0 for record in caplog.records)
